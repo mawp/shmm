@@ -23,9 +23,6 @@ Type objective_function<Type>::operator() ()
   //int n = P.rows();
 
   // Uniformization
-
-  //Eigen::SparseMatrix<Type> S = I;
-  //Eigen::SparseMatrix<Type> pt = I;
   Eigen::SparseMatrix<Type> FPdt = F*P*dt;
   Eigen::SparseMatrix<Type> svec = pvec;
   Eigen::SparseMatrix<Type> pout2 = pvec;
@@ -34,18 +31,12 @@ Type objective_function<Type>::operator() ()
   for(int i=0; i<m; i++){
     fact = exp(lgamma(ind+1.0));    
     //fact = exp(lgamma(CppAD::<double>(i+1)));
-    // Create transition matrix (actually not needed)
-    //S = S * FPdt; // Matrix x Matrix
-    //pt = pt + S/fact;
     // Update state vector
     svec = svec * FPdt; // Vector x Matrix
     pout2 = pout2 + svec/fact;
     // Update index
     ind += 1.0; // This should be changed to use i converted to Type
   }
-  // Multiply by the constant
-  //pt = pt * exp(-F*dt);
-  //Eigen::SparseMatrix<Type> pout = pvec * pt;
   pout2 = pout2 * exp(-F*dt);
 
 
@@ -57,12 +48,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> y=A*beta+B*u;
   ans-=dnorm(x,y,exp(logsd0),1).sum();
 
-  //REPORT(P);
-  //REPORT(pout);
   REPORT(pout2);
-  //REPORT(S);
-  //REPORT(fact);
-  //REPORT(pt);
 
   return ans;
 }
