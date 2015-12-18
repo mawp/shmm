@@ -1,6 +1,9 @@
 # Todo:
 # DONE 1. Construct generator inside TMB
-# 2. Implement uniformization algorithm, input a vector that will get multiplied and output it afterward
+# DONE 2. Implement uniformization algorithm, input a vector that will get multiplied and output it afterward
+# 3. Implement filter
+# 4. Implement likelihood function
+# 5. Implement smoother
 require(TMB)
 compile('../src/simple.cpp')
 scriptname <- "../src/simple"
