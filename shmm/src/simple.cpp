@@ -10,14 +10,16 @@ Type objective_function<Type>::operator() ()
   DATA_SPARSE_MATRIX(I);   // Identity matrix
   //DATA_SPARSE_MATRIX(pvec);// Vector to be multiplied by P
   DATA_MATRIX(pvec);// Vector to be multiplied by P
-  DATA_SCALAR(mu);         // Movement parameter
+  //DATA_SCALAR(mu);         // Movement parameter
   //DATA_SCALAR(Fin);          // Numerical largest rate
   DATA_SCALAR(dt);         // Time step
   DATA_INTEGER(m);         // Number of iterations of uniformization
-  DATA_SCALAR(logDx);      // 
-  DATA_SCALAR(logDy);      // 
   DATA_SPARSE_MATRIX(Sns); // 
   DATA_SPARSE_MATRIX(Sew); // 
+  //DATA_SCALAR(logDx);      // 
+  //DATA_SCALAR(logDy);      // 
+  PARAMETER(logDx);      // 
+  PARAMETER(logDy);      // 
   PARAMETER(u);            // Random effects vector
 
   // Do dummy optimisation
@@ -35,6 +37,7 @@ Type objective_function<Type>::operator() ()
   int n = datlik.cols();
   matrix<Type> pred(nt, n);
   matrix<Type> phi(nt, n);
+  vector<Type> psi(nt-1);
   //pred.row(0) += pred.row(0); // Doesn't work with sparse, works with dense
   //pred.col(0) += pred.col(0); // Works with both sparse and dense
   pred.row(0) = pvec; // Doesn't work with sparse, works with dense
@@ -65,34 +68,17 @@ Type objective_function<Type>::operator() ()
     
     // Data update
     matrix<Type> post = pred.row(t).cwiseProduct(datlik.row(t)); // Element-wise product
-    phi.row(t) = post;
+    psi(t-1) = post.sum(); // Add small value to avoid division by zero
+    phi.row(t) = post / (psi(t-1) + 1e-20);
 
   }
 
-  /*
-  Eigen::SparseMatrix<Type> FPdt = F*P*dt;
-  //Eigen::SparseMatrix<Type> svec = pvec;
-  matrix<Type> svec = pvec;
-  //Eigen::SparseMatrix<Type> pout2 = pvec;
-  matrix<Type> pout2 = pvec;
-  Type ind = 1.0;
-  Type fact;
-  for(int i=0; i<m; i++){
-    fact = exp(lgamma(ind+1.0));    
-    //fact = exp(lgamma(CppAD::<double>(i+1)));
-    // Update state vector
-    svec = svec * FPdt; // Vector x Matrix
-    pout2 = pout2 + svec/fact;
-    // Update index
-    ind += 1.0; // This should be changed to use i converted to Type
-  }
-  pout2 = pout2 * exp(-F*dt);
-  */
+  ans -= sum(log(psi));
 
-  //REPORT(pout2);
   REPORT(nt);
   REPORT(pred);
   REPORT(phi);
+  REPORT(psi);
   REPORT(G);
   REPORT(F);
   REPORT(P);

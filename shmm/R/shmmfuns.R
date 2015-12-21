@@ -7,7 +7,7 @@ remove.no.access <- function(S, n, nx, land){
     bot <- seq(nx, n-nx, by=nx)
     S[bot, bot+1] <- 0
     # Remove land
-    if(!is.null(land)){
+    if(length(land) != 0){
         S[land, ] <- 0
         S[, land] <- 0
     }
