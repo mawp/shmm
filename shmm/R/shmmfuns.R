@@ -14,7 +14,7 @@ remove.no.access <- function(S, n, nx, land){
     return(S)
 }
 
-make.ns <- function(n, nx, land){
+make.ew <- function(n, nx, land){
     # Skeleton matrix for generator
     S <- Matrix(0, n, n)
     doS <- Diagonal(n, 1)
@@ -31,7 +31,7 @@ make.ns <- function(n, nx, land){
     return(S)
 }
 
-make.ew <- function(n, nx, land){
+make.ns <- function(n, nx, land){
     # Skeleton matrix for generator
     S <- Matrix(0, n, n)
     doS <- Diagonal(n, 1)
