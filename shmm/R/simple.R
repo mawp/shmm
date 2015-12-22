@@ -21,7 +21,7 @@ sdx <- 3
 sdy <- 4
 osd <- 1
 dt <- 1
-nt <- 50
+nt <- 30
 
 # Simulate movements
 set.seed(654)
@@ -74,6 +74,7 @@ I <- Matrix(0, n, n)
 diag(I) <- rep(1, n)
 P <- AA/F + I
 m <- ceiling(F*dt + 4*sqrt(F*dt) + 5) # Expression from Grassmann
+#G <- uniformization(AA, dt)
 
 P <- as(P, 'dgTMatrix')
 I <- as(I, 'dgTMatrix')
@@ -84,7 +85,7 @@ Sns <- as(Sns, 'dgTMatrix')
 lgam <- lgamma(2:(m+2))
 data <- list(datlik=datlik, I=I, dt=dt, m=m, Sns=Sns, Sew=Sew, lgam=lgam)
 pars <- list(logDx=logDx, logDy=logDy)
-obj <- MakeADFun(data=data, parameters=pars, random=NULL, DLL='simple')
+obj <- MakeADFun(data=data, parameters=pars, random=NULL, DLL='simple') # This one requires memory
 
 # Estimate
 system.time(opt <- nlminb(obj$par, obj$fn, obj$gr))
