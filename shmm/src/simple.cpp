@@ -2,6 +2,97 @@
 // 21.12.2015
 #include <TMB.hpp>
 
+/* Class to build generator and project state one step forward  */
+//struct {
+  // Data for atomic function (note: double types)
+  // Initialize at first evaluation with double types
+namespace shmm {
+  // Input that is constant (do not depend on parameters)
+  int m;
+  Eigen::SparseMatrix<double> I;
+  Eigen::SparseMatrix<double> Sns;
+  Eigen::SparseMatrix<double> Sew;
+  double dt;
+  vector<double> lgam;
+
+  template<class Type>
+  struct shmm_parms {
+    // Input that is *not* constant:
+    matrix<Type> svec;
+    Type Dx;
+    Type Dy;
+    // Method: vector -> shmm_parms
+    void operator=(vector<Type> x){
+      int n = x.size() - 2;
+      svec.resize(1, n);
+      svec << x.head(n);
+      Dx = x(n);
+      Dy = x(n+1);
+    }
+    // Method: shmm_parms -> vector
+    operator vector<Type>(){
+      int n = svec.size();
+      vector<Type> x(n + 2);
+      x.head(n) << svec;
+      x(n) = Dx;
+      x(n+1) = Dy;
+      return x;
+    }
+  };
+
+
+  // Build generator and project state one step forward
+  template<class Type>
+  matrix<Type> forwardProject(matrix<Type> svec, Type Dx, Type Dy){
+    // Cast required 'double' objects to 'Type'
+    Eigen::SparseMatrix<Type>   I = shmm::  I.cast<Type>();
+    Eigen::SparseMatrix<Type> Sns = shmm::Sns.cast<Type>();
+    Eigen::SparseMatrix<Type> Sew = shmm::Sew.cast<Type>();
+    Type                       dt = shmm::dt;
+    vector<Type>             lgam = shmm::lgam.cast<Type>();
+
+    // Build generator
+    Type F = 2 * (Dx + Dy); // Absolute largest jump rate, max(abs(diag(G)))
+    Eigen::SparseMatrix<Type> G = Dx*Sew + Dy*Sns; // Make generator
+    Eigen::SparseMatrix<Type> P = G/F + I; // Sub-stochastic matrix
+    Eigen::SparseMatrix<Type> FPdt = F*P*Type(dt);
+
+    // One-step forward
+    matrix<Type> predtmp = svec;
+    for(int i=0; i<m; i++){
+      svec = svec * FPdt; // Vector x Matrix (this can be optimised?)
+      predtmp = predtmp + svec/exp(lgam(i)); // exp(lgamma()) is factorial
+    }
+    predtmp = predtmp * exp(-F*dt);
+    predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
+    return predtmp;
+  }
+//};
+
+  // Wrapper: vector input -> vector output
+  template<class Type>
+  vector<Type> forwardProject(vector<Type> input){
+    shmm_parms<Type> parms;
+    parms = input;
+    vector<Type> output(parms.svec.size());
+    output << forwardProject(parms.svec, parms.Dx, parms.Dy);
+    return output;
+  }
+  REGISTER_ATOMIC(forwardProject)
+
+  // User version
+  template<class Type>
+  matrix<Type> ForwardProject(matrix<Type> svec, Type Dx, Type Dy){
+    shmm_parms<Type> parms = {svec, Dx, Dy};
+    vector<Type> x = parms;
+    vector<Type> y = forwardProject(x);
+    matrix<Type> out(1, y.size());
+    out << y;
+    return out;
+  }
+}
+
+
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
