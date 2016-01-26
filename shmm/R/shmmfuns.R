@@ -1,4 +1,53 @@
 
+check.inp <- function(inp){
+    return(inp)
+}
+
+fit.shmm <- function(inp){
+    inp <- check.inp(inp)
+    nt <- dim(inp$datlik)[1]
+    nx <- dim(inp$datlik)[2]
+    ny <- dim(inp$datlik)[3]
+    n <- nx*ny
+
+    datlikin <- matrix(0, nt, n)
+    for (i in 1:nt) datlikin[i, ] <- as.vector(inp$datlik[i, , ])
+    # TMB
+    # Close diagonals (jump north-south)
+    Sns <- make.ns(n, nx, land)
+    # Far diagonals (jump east-west)
+    Sew <- make.ew(n, nx, land)
+    Dx <- 0.5 * (inp$ini$sdx/inp$dx)^2  # East west move rate (diffusion)
+    Dy <- 0.5 * (inp$ini$sdy/inp$dy)^2  # North south move rate (diffusion)
+
+    # Generator
+    #AA <- make.generator(nx, ny, dx, dy, sdx, sdy, land=land)
+    AA <- make.generator(nx, ny, Dx, Dy, land=land)
+    F <- max(abs(AA))
+    I <- Matrix(0, n, n)
+    diag(I) <- rep(1, n)
+    #P <- AA/F + I
+    m <- ceiling(F*inp$dt + 4*sqrt(F*inp$dt) + 5) # Expression from Grassmann
+    #G <- uniformization(AA, dt)
+
+    #P <- as(P, 'dgTMatrix')
+    I <- as(I, 'dgTMatrix')
+    Sew <- as(Sew, 'dgTMatrix')
+    Sns <- as(Sns, 'dgTMatrix')
+
+    # Create objective function
+    lgam <- lgamma(2:(m+2))
+    data <- list(datlik=datlikin, I=I, dt=inp$dt, m=m, Sns=Sns, Sew=Sew, lgam=lgam)
+    pars <- list(logDx=log(Dx), logDy=log(Dy))
+    obj <- MakeADFun(data=data, parameters=pars, random=NULL, DLL='simple') # This one requires memory
+
+    # Estimate
+    system.time(opt <- nlminb(obj$par, obj$fn, obj$gr))
+    system.time(rep <- sdreport(obj))
+
+    return(rep)
+}
+
 remove.no.access <- function(S, n, nx, land){
     # Take care of top of domain
     top <- seq(nx+1, n, by=nx)
@@ -48,9 +97,9 @@ make.ns <- function(n, nx, land){
     return(S)
 }
 
-make.generator <- function(nx, ny, dx, dy, sdx, sdy, land=NULL){
-    Dx <- 0.5 * (sdx/dx)^2;  # East west move rate (diffusion)
-    Dy <- 0.5 * (sdy/dy)^2;  # North south move rate (diffusion)
+make.generator <- function(nx, ny, Dx, Dy, land=NULL){
+    #Dx <- 0.5 * (sdx/dx)^2;  # East west move rate (diffusion)
+    #Dy <- 0.5 * (sdy/dy)^2;  # North south move rate (diffusion)
 
     n <- nx*ny
     # Close diagonals (jump north-south)

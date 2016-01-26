@@ -5,28 +5,31 @@
 # DONE 4. Implement filter
 # DONE 5. Implement simulator and data likelihood calculator for simple example
 # DONE 6. Implement likelihood function and estimate
-# 7. Implement smoother. How: use a flag as a parameter fixed using map
-# 8. Exploit symmetry of G somehow? see http://eigen.tuxfamily.org/dox-devel/group__TutorialSparse.html
-#    Symmetry is broken if advection is used
-# 9. Land in simulator and optimised code that doesn't include in P the inaccessible land cells
+#  7. Implement smoother. How: use a flag as a parameter fixed using map
+#  8. Exploit symmetry of G somehow? see http://eigen.tuxfamily.org/dox-devel/group__TutorialSparse.html
+#     Symmetry is broken if advection is used
+#  9. Land in simulator and optimised code that doesn't include in P the inaccessible land cells
+# 10. Think about how to choose m, this depends on the expected range of D and has a large influence on speed
+#     What happens if the used m is smaller than the required m? will estimation work?
 rm(list=ls())
 require(TMB)
 source('shmmfuns.R')
 compile('../src/simple.cpp')
 scriptname <- "../src/simple"
 dyn.load(dynlib(scriptname))
+inp <- list()
 
 # Parameters
-sdx <- 3
-sdy <- 4
-osd <- 1
-dt <- 1
+inp$ini$sdx <- 6
+inp$ini$sdy <- 5
+osd <- 1 # Observation error sd
+inp$dt <- 1
 nt <- 30
 
 # Simulate movements
 set.seed(654)
-Xx <- cumsum(rnorm(nt, 0, sdx*sqrt(dt)))
-Xy <- cumsum(rnorm(nt, 0, sdy*sqrt(dt)))
+Xx <- cumsum(rnorm(nt, 0, inp$ini$sdx*sqrt(inp$dt)))
+Xy <- cumsum(rnorm(nt, 0, inp$ini$sdy*sqrt(inp$dt)))
 Yx <- Xx + rnorm(nt, 0, osd)
 Yy <- Xy + rnorm(nt, 0, osd)
 
@@ -35,14 +38,14 @@ require(Matrix)
 # X
 xmin <- min(Xx) - 0.1*diff(range(Xx))
 xmax <- max(Xx) + 0.1*diff(range(Xx))
-dx <- 1
-xx <- seq(xmin, xmax, by=dx)
+inp$dx <- 1
+xx <- seq(xmin, xmax, by=inp$dx)
 nx <- length(xx)
 # Y
 ymin <- min(Xy) - 0.1*diff(range(Xy))
 ymax <- max(Xy) + 0.1*diff(range(Xy))
-dy <- 1
-yy <- seq(ymin, ymax, by=dy)
+inp$dy <- 1
+yy <- seq(ymin, ymax, by=inp$dy)
 ny <- length(yy)
 # Land
 indsy <- which(yy > 6 & yy < 8)
@@ -50,46 +53,18 @@ indsx <- which(xx > 1 & xx < 4)
 dummy <- matrix(0, nx, ny)
 #dummy[indsx, indsy] <- 1
 land <- which(dummy==1)
-
+cat('nx: ', nx, ' ny: ', ny, ' nt: ', nt, ' no states: ', nx*ny, '\n')
 
 tic <- Sys.time()
 
 # Data likelihood
 n <- nx*ny
-datlik <- matrix(0, nt, n)
-for(i in 1:nt) datlik[i, ] <- as.vector(outer(dnorm(xx, Yx[i], osd), dnorm(yy, Yy[i], osd)))
+inp$datlik <- array(0, dim=c(nt, nx, ny))
+for (i in 1:nt) inp$datlik[i, , ] <- outer(dnorm(xx, Yx[i], osd), dnorm(yy, Yy[i], osd))
 
-# TMB
-# Close diagonals (jump north-south)
-Sns <- make.ns(n, nx, land)
-# Far diagonals (jump east-west)
-Sew <- make.ew(n, nx, land)
-logDx <- log(0.5 * (sdx/dx)^2)  # East west move rate (diffusion)
-logDy <- log(0.5 * (sdy/dy)^2)  # North south move rate (diffusion)
+# Fit SHMM
+rep <- fit.shmm(inp)
 
-# Generator
-AA <- make.generator(nx, ny, dx, dy, sdx, sdy, land=land)
-F <- max(abs(AA))
-I <- Matrix(0, n, n)
-diag(I) <- rep(1, n)
-P <- AA/F + I
-m <- ceiling(F*dt + 4*sqrt(F*dt) + 5) # Expression from Grassmann
-#G <- uniformization(AA, dt)
-
-P <- as(P, 'dgTMatrix')
-I <- as(I, 'dgTMatrix')
-Sew <- as(Sew, 'dgTMatrix')
-Sns <- as(Sns, 'dgTMatrix')
-
-# Create objective function
-lgam <- lgamma(2:(m+2))
-data <- list(datlik=datlik, I=I, dt=dt, m=m, Sns=Sns, Sew=Sew, lgam=lgam)
-pars <- list(logDx=logDx, logDy=logDy)
-obj <- MakeADFun(data=data, parameters=pars, random=NULL, DLL='simple') # This one requires memory
-
-# Estimate
-system.time(opt <- nlminb(obj$par, obj$fn, obj$gr))
-system.time(rep <- sdreport(obj))
 
 # Get parameter estimates
 ests <- opt$par
