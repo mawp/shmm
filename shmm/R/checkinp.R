@@ -26,6 +26,7 @@
 check.inp <- function(inp){
 
     inp$scriptname <- 'shmm'
+    if (!'do.sd.report' %in% names(inp)) inp$do.sd.report <- TRUE
     
     return(inp)
 }

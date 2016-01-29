@@ -15,6 +15,74 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#' @name add.gen
+#' @title Add gen key to inp
+#' @param inp Input list
+#' @param ny Number of grid cells in y-direction
+#' @param Dx Diffusivity in x-direction
+#' @param Dy Diffusivity in y-direction
+#' @param land Vector containing linear indices of land cells.
+#' @return Generator as sparse matrix.
+#' @export
+add.gen <- function(inp){
+    nx <- inp$grid$nx
+    ny <- inp$grid$ny
+    n <- nx*ny
+
+    # Close diagonals (jump north-south)
+    Sns <- make.ns(n, nx, inp$land)
+    # Far diagonals (jump east-west)
+    Sew <- make.ew(n, nx, inp$land)
+    # Diffusivity
+    inp$gen$Dx <- 0.5 * (inp$ini$sdx/inp$grid$dx)^2  # East west move rate (diffusion)
+    inp$gen$Dy <- 0.5 * (inp$ini$sdy/inp$grid$dy)^2  # North south move rate (diffusion)
+
+    # Calculate m (number of uniformization iterations) if not specified
+    if (!'m' %in% names(inp$gen)){
+        inp$gen$m <- calc.m(inp)
+    }
+
+    # Convert to dgTMatrix (required format by TMB)
+    inp$gen$I <- as(diag.sparse(n), 'dgTMatrix')
+    inp$gen$Sew <- as(Sew, 'dgTMatrix')
+    inp$gen$Sns <- as(Sns, 'dgTMatrix')
+
+    inp$gen$lgam <- lgamma(2:(inp$gen$m+2)) # Factorial
+    
+    return(inp)
+}
+
+
+#' @name diag.sparse
+#' @title Create sparse identity matrix
+#' @param n Dimension of matrix
+#' @return Sparse identity matrix
+diag.sparse <- function(n){
+    I <- Matrix::Matrix(0, n, n)
+    diag(I) <- rep(1, n)
+    return(I)
+}
+
+
+#' @name calc.m
+#' @title Calculate m (number of uniformization iterations)
+#' @details
+#' This uses the expression stated in Grassmann (1977) eq. 10.
+#' Using this m guarantees that the truncation error of elements in a transition
+#' probability matrix is less than 1e-4.
+#' @param grid Spatial grid details
+#' @param gen Generator details
+#' @param land Specification of land cells
+#' @return The number of uniformization iterations
+calc.m <- function(inp){
+    n <- inp$grid$nx * inp$grid$ny
+    AA <- make.generator(inp$grid$nx, inp$grid$ny, inp$gen$Dx, inp$gen$Dy, inp$land)
+    F <- max(abs(AA))
+    m <- ceiling(F*inp$dt + 4*sqrt(F*inp$dt) + 5) # Expression from Grassmann
+    return(m)
+}
+
+
 #' @name make.generator
 #' @title Create generator
 #' @param nx Number of grid cells in x-direction

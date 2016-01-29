@@ -4,13 +4,9 @@
 \alias{make.obj}
 \title{Create TMB obj using TMB::MakeADFun and squelch screen printing.}
 \usage{
-make.obj(datin, pl, inp, phase = 1)
+make.obj(inp, phase = 1)
 }
 \arguments{
-\item{datin}{Data list.}
-
-\item{pl}{Parameter list.}
-
 \item{inp}{List of input variables as output by check.inp.}
 
 \item{phase}{Estimation phase, integer.}

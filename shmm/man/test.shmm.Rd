@@ -4,10 +4,10 @@
 \alias{test.shmm}
 \title{Example of a shmm analysis.}
 \usage{
-test.shmm()
+test.shmm(nobs = 40)
 }
 \arguments{
-\item{dataset}{}
+\item{nobs}{Number of observations to simulate}
 }
 \value{
 A result report as given by fit.shmm().

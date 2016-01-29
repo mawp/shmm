@@ -24,12 +24,12 @@ setClass("shmmcls")
 #' @name test.shmm
 #' @title Example of a shmm analysis.
 #' @details Loads a data set, fits the model, plots the results.
-#' @param dataset 
+#' @param nobs Number of observations to simulate
 #' @return A result report as given by fit.shmm().
 #' @examples
 #' rep <- test.shmm()
 #' @export
-test.shmm <- function(){
+test.shmm <- function(nobs=40){
 
     inp <- list()
     inp$datatype <- 'xy'
@@ -44,7 +44,7 @@ test.shmm <- function(){
     inp$grid$dy <- 1
 
     # Simulate
-    inp <- sim.shmm(inp)
+    inp <- sim.shmm(inp, nobs=nobs)
 
     # Make grid
     # X

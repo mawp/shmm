@@ -29,74 +29,48 @@ fit.shmm <- function(inp, dbg=0){
     rep <- NULL
     # Check input list
     inp <- check.inp(inp)
-    nt <- dim(inp$datlik)[1]
-    nx <- inp$grid$nx
-    ny <- inp$grid$ny
-    n <- nx*ny
 
-    datlikin <- matrix(0, nt, n)
-    for (i in 1:nt) datlikin[i, ] <- as.vector(inp$datlik[i, , ])
-    # TMB
-    # Close diagonals (jump north-south)
-    Sns <- make.ns(n, nx, inp$land)
-    # Far diagonals (jump east-west)
-    Sew <- make.ew(n, nx, inp$land)
-    Dx <- 0.5 * (inp$ini$sdx/inp$grid$dx)^2  # East west move rate (diffusion)
-    Dy <- 0.5 * (inp$ini$sdy/inp$grid$dy)^2  # North south move rate (diffusion)
-
-    # Generator
-    #AA <- make.generator(nx, ny, dx, dy, sdx, sdy, land=land)
-    AA <- make.generator(nx, ny, Dx, Dy, land=inp$land)
-    F <- max(abs(AA))
-    I <- Matrix::Matrix(0, n, n)
-    diag(I) <- rep(1, n)
-    #P <- AA/F + I
-    m <- ceiling(F*inp$dt + 4*sqrt(F*inp$dt) + 5) # Expression from Grassmann
-    #G <- uniformization(AA, dt)
-
-    #P <- as(P, 'dgTMatrix')
-    I <- as(I, 'dgTMatrix')
-    Sew <- as(Sew, 'dgTMatrix')
-    Sns <- as(Sns, 'dgTMatrix')
+    # Add generator details
+    inp <- add.gen(inp)
 
     # Create objective function
-    lgam <- lgamma(2:(m+2))
-    data <- list(datlik=datlikin, I=I, dt=inp$dt, m=m, Sns=Sns, Sew=Sew, lgam=lgam)
-    pars <- list(logDx=log(Dx), logDy=log(Dy))
-    obj <- TMB::MakeADFun(data=data, parameters=pars, random=NULL, DLL=inp$scriptname) # This one requires memory
+    obj <- make.obj(inp)
 
-    # Estimate
-    system.time(opt <- nlminb(obj$par, obj$fn, obj$gr))
-    system.time(rep <- TMB::sdreport(obj))
+    # Estimate parameters
+    opt <- try(nlminb(obj$par, obj$fn, obj$gr))
+    
+    # Calculate uncertainties
+    if (inp$do.sd.report){
+        rep <- try(TMB::sdreport(obj))
+    } else {
+        rep <- list()
+    }
+
+    rep$opt <- opt
+    rep$obj <- obj
+    rep$inp <- inp
 
     if(!is.null(rep)) class(rep) <- "shmmcls"
     return(rep)
 }
 
 
-#' @name make.datin
-#' @title Create data list used as input to TMB::MakeADFun.
-#' @param inp List of input variables as output by check.inp.
-#' @param dbg Debugging option. Will print out runtime information useful for debugging if set to 1. 
-#' @return List to be used as data input to TMB::MakeADFun.
-#' @export
-make.datin <- function(inp, dbg=0){
-    datin <- list()
-    return(datin)
-}
-
-
 #' @name make.obj
 #' @title Create TMB obj using TMB::MakeADFun and squelch screen printing.
-#' @param datin Data list.
-#' @param pl Parameter list.
 #' @param inp List of input variables as output by check.inp.
 #' @param phase Estimation phase, integer.
 #' @return List to be used as data input to TMB.
 #' @export
 #' @import TMB
-make.obj <- function(datin, pl, inp, phase=1){
-    obj <- TMB::MakeADFun(data=datin, parameters=pl, random=inp$RE, DLL=inp$scriptname, hessian=TRUE, map=inp$map[[phase]])
+make.obj <- function(inp, phase=1){
+    datlist <- make.datlist(inp)
+    parlist <- make.parlist(inp)
+    # This one requires memory if not using atomic
+    obj <- TMB::MakeADFun(data=datlist,
+                          parameters=parlist,
+                          random=NULL,
+                          DLL=inp$scriptname)
+    # Make TMB quiet
     TMB:::config(trace.optimize=0, DLL=inp$scriptname)
     verbose <- FALSE
     obj$env$tracemgc <- verbose
@@ -105,3 +79,33 @@ make.obj <- function(datin, pl, inp, phase=1){
     obj$fn(obj$par)
     return(obj)
 }
+
+
+#' @name make.datlist
+#' @title Create data list used as input to TMB::MakeADFun.
+#' @param inp List of input variables as output by check.inp.
+#' @return List to be used as data input to TMB::MakeADFun.
+#' @export
+make.datlist <- function(inp){
+    datlist <- list(datlik=inp$datlik$all,
+                    I=inp$gen$I,
+                    dt=inp$dt,
+                    m=inp$gen$m,
+                    Sns=inp$gen$Sns,
+                    Sew=inp$gen$Sew,
+                    lgam=inp$gen$lgam)
+    return(datlist)
+}
+
+
+#' @name make.parlist
+#' @title Create parameter list used as input to TMB::MakeADFun.
+#' @param inp List of input variables as output by check.inp.
+#' @return List to be used as parameter input to TMB::MakeADFun.
+#' @export
+make.parlist <- function(inp){
+    parlist <- list(logDx=log(inp$gen$Dx),
+                    logDy=log(inp$gen$Dy))
+    return(parlist)
+}
+
