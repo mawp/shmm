@@ -1,0 +1,10 @@
+citHeader("To cite shmm in publications, please use:")
+citEntry(entry="article",
+         title = "SHMM",
+         author = c(person(given=c("Martin", "W."), family="Pedersen", email="mawp@dtu.dk")),
+         note="In review",
+         doi="xxx/xxx",
+         year="2016",
+         journal="Science",
+         textVersion=NULL
+         )

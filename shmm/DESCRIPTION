@@ -1,0 +1,14 @@
+Package: shmm
+Type: Package
+Title: Spatial hidden Markov models for animal tracking.
+Version: 0.1
+Date: 2016-01-28
+Author: Martin Waever Pedersen
+Maintainer: Martin Waever Pedersen <mawp@dtu.dk>
+Description: Fit spatial HMMs to different types of movement data
+License: GPL (>=3)
+Copyright: Martin Waever Pedersen <mawp@dtu.dk>
+Depends:
+    R (>= 3.0),
+    TMB
+LinkingTo: TMB, RcppEigen
