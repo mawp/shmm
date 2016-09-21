@@ -97,6 +97,7 @@ template<class Type>
 Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(datlik);     // Data likelihood
+  DATA_INTEGER(dosmoo);    // If 1 smoothing is done
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
   PARAMETER(logDy);        // log diffusion in north-south (y) direction
 
@@ -125,11 +126,6 @@ Type objective_function<Type>::operator() ()
   // // Calculate components for uniformization
   Type Dx = exp(logDx);
   Type Dy = exp(logDy);
-  // Type F = 2 * (Dx + Dy); // Absolute largest jump rate, max(abs(diag(G)))
-  // Eigen::SparseMatrix<Type> G = Dx*Sew + Dy*Sns; // Make generator
-  // Eigen::SparseMatrix<Type> P = G/F + I; // Sub-stochastic matrix
-  // Eigen::SparseMatrix<Type> FPdt = F*P*dt;
-  // //Eigen::SparseMatrix<Type> FPdt = F*dt*((Dx*Sew + Dy*Sns)/F + I);
 
   // Initialise HMM grids
   matrix<Type> pred(nt, n);
@@ -142,23 +138,7 @@ Type objective_function<Type>::operator() ()
   for(int t=1; t<nt; t++){
     // Time update using uniformization algorithm
     matrix<Type> svec = phi.row(t-1);
-
-
-
-    //matrix<Type> predtmp = svec;
-
     matrix<Type> predtmp = shmm::ForwardProject(svec, Dx, Dy);
-
-    // for(int i=0; i<m; i++){
-    //   svec = svec * FPdt; // Vector x Matrix (this can be optimised?)
-    //   //predtmp = predtmp + svec/exp(lgamma(Type(i+2))); // exp(lgamma()) is factorial
-    //   predtmp = predtmp + svec/exp(lgam(i)); // exp(lgamma()) is factorial
-    // }
-    // predtmp = predtmp * exp(-F*dt);
-    // predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
-
-
-
     pred.row(t) = predtmp; // Store prediction
     
     // Data update
@@ -170,10 +150,28 @@ Type objective_function<Type>::operator() ()
   // Negative log likelihood
   Type ans = -sum(log(psi));
 
+  // Smoothing
+  // TODO: only run smoothing once after estimation is completed
+  matrix<Type> smoo(nt, n);
+  if (dosmoo == 1){
+    // Smoothing loop
+    smoo.row(nt-1) = phi.row(nt-1);
+    for(int t=1; t<nt; t++){
+      int tt = nt - t;
+      // Time update using uniformization algorithm
+      matrix<Type> ratio = smoo.row(tt).cwiseQuotient(pred.row(tt));
+      matrix<Type> ratiotmp = shmm::ForwardProject(ratio, Dx, Dy);
+      matrix<Type> post = phi.row(tt-1).cwiseProduct(ratiotmp);
+      post = post / (post.sum() + 1e-20);
+      smoo.row(tt-1) = post;
+    }
+  }
+
   // Reports
   REPORT(pred);
   REPORT(phi);
   REPORT(psi);
+  REPORT(smoo);
 
   return ans;
 }

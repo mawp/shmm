@@ -34,8 +34,10 @@ add.gen <- function(inp){
     # Far diagonals (jump east-west)
     Sew <- make.ew(n, nx, inp$land)
     # Diffusivity
-    inp$gen$Dx <- 0.5 * (inp$ini$sdx/inp$grid$dx)^2  # East west move rate (diffusion)
-    inp$gen$Dy <- 0.5 * (inp$ini$sdy/inp$grid$dy)^2  # North south move rate (diffusion)
+    # East west move rate (diffusion)
+    inp$gen$Dx <- sd2D(exp(inp$ini$logsdx), inp$grid$dx)
+    # North south move rate (diffusion)
+    inp$gen$Dy <- sd2D(exp(inp$ini$logsdy), inp$grid$dy)
 
     # Calculate m (number of uniformization iterations) if not specified
     if (!'m' %in% names(inp$gen)){

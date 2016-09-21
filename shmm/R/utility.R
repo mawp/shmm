@@ -35,8 +35,8 @@ test.shmm <- function(nobs=40){
     inp$datatype <- 'xy'
 
     # Parameters
-    inp$ini$sdx <- 6
-    inp$ini$sdy <- 5
+    inp$ini$logsdx <- log(6)
+    inp$ini$logsdy <- log(5)
     inp$osd <- 1 # Observation error sd
     inp$dt <- 1
 
@@ -102,3 +102,54 @@ invlogit <- function(a) 1/(1+exp(-a))
 #' @param a Value to take inverse logp1 of.
 #' @return Inverse logp1.
 invlogp1 <- function(a) 1 + exp(a)
+
+
+#' @name get.distr
+#' @title Extract distribution from rep
+#' @param name Name of the distribution to plot. Either 'phi', 'pred' or 'smoo'.
+#' @param rep Result of running fit.shmm.
+#' @return The requested distribution as an 3D-array.
+#' @export
+get.distr <- function(name, rep){
+    if (name %in% names(rep$obj$report())){
+        vecdistr <- rep$obj$report()[[name]]
+        distr <- array(0, dim=c(rep$inp$ns, rep$inp$grid$nx, rep$inp$grid$ny))
+        for (i in 1:rep$inp$ns){
+            distr[i, , ] <- matrix(vecdistr[i, ], rep$inp$grid$nx, rep$inp$grid$ny)
+        }
+        return(distr)
+    } else {
+        stop(name, 'not in names(rep$obj$report()!')
+    }
+}
+
+#' @name get.mean.track
+#' @title Calculate an estimated track from the mean of the smoothed distribution.
+#' @param rep Result of running fit.shmm.
+#' @return A list containing 
+#' @export
+get.mean.track <- function(rep){
+    if (rep$inp$dosmoo == 1){
+        smoo <- get.distr('smoo', rep)
+        Xmean <- numeric(rep$inp$ns)
+        Ymean <- numeric(rep$inp$ns)
+        for (t in 1:rep$inp$ns){
+            Xmean[t] <- sum(apply(smoo[t, , ], 1, sum) * rep$inp$grid$xx)
+            Ymean[t] <- sum(apply(smoo[t, , ], 2, sum) * rep$inp$grid$yy)
+        }
+        rep$tracks$Xmean <- Xmean
+        rep$tracks$Ymean <- Ymean
+    } else {
+        warning('Could not calculate mean track as dosmoo != 1')
+    }
+    return(rep)
+}
+
+
+sd2D <- function(sd, dx){
+    return(0.5 * (sd/dx)^2)
+}
+
+D2sd <- function(D, dx){
+    return(sqrt(2*D) * dx)
+}

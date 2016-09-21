@@ -26,17 +26,22 @@
 #' @examples
 #' inp <- calc.data.likelihood(inp)
 calc.data.likelihood <- function(inp){
+
+    inp <- check.inp(inp)
+    
     if (inp$datatype == 'xy'){
-        n <- inp$grid$nx * inp$grid$ny
-        nt <- length(inp$obsX)
-        inp$datlik$xy <- array(0, dim=c(nt, inp$grid$nx, inp$grid$ny))
-        for (i in 1:nt) inp$datlik$xy[i, , ] <- outer(dnorm(inp$grid$xx, inp$obsX[i], inp$osd),
-                                                   dnorm(inp$grid$yy, inp$obsY[i], inp$osd))
+        inp$datlik$xy <- array(0, dim=c(inp$ns, inp$grid$nx, inp$grid$ny))
+        for (i in 1:inp$ns){
+            inp$datlik$xy[i, , ] <- outer(dnorm(inp$grid$xx, inp$obs$X[i], inp$osd),
+                                          dnorm(inp$grid$yy, inp$obs$Y[i], inp$osd))
+        }
     }
 
     # Combined data likelihood for all data types
-    inp$datlik$all <- matrix(0, nt, n)
-    for (i in 1:nt) inp$datlik$all[i, ] <- as.vector(inp$datlik$xy[i, , ])
+    inp$datlik$all <- matrix(0, inp$ns, inp$grid$n)
+    for (i in 1:inp$ns){
+        inp$datlik$all[i, ] <- as.vector(inp$datlik$xy[i, , ])
+    }
 
     return(inp)
 }

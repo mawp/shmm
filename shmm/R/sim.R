@@ -29,18 +29,20 @@ sim.shmm <- function(inp, nobs=40){
     sim$true <- inp$ini
     
     if (inp$datatype == 'xy'){
-        Xx <- cumsum(rnorm(nobs, 0, inp$ini$sdx*sqrt(inp$dt)))
-        Xy <- cumsum(rnorm(nobs, 0, inp$ini$sdy*sqrt(inp$dt)))
+        Xx <- cumsum(rnorm(nobs, 0, exp(inp$ini$logsdx)*sqrt(inp$dt)))
+        Xy <- cumsum(rnorm(nobs, 0, exp(inp$ini$logsdy)*sqrt(inp$dt)))
         Yx <- Xx + rnorm(nobs, 0, inp$osd)
         Yy <- Xy + rnorm(nobs, 0, inp$osd)
         # Store simulation
         sim$true$X <- Xx
         sim$true$Y <- Xy
-        sim$obsX <- Yx
-        sim$obsY <- Yy
+        sim$obs$X <- Yx
+        sim$obs$Y <- Yy
+        sim$time$X <- 1:nobs
+        sim$time$Y <- 1:nobs
     }
 
-    sim <- check.inp(sim)
+    #sim <- check.inp(sim)
     
     return(sim)
 }
