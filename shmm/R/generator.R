@@ -117,18 +117,20 @@ make.generator <- function(nx, ny, Dx, Dy, land=NULL){
 #' @export
 make.ew <- function(n, nx, land){
     # Skeleton matrix for generator
-    S <- Matrix::Matrix(0, n, n)
-    doS <- Matrix::Diagonal(n, 1)
+    S <- Matrix::bandSparse(n, k = 1, diag = list(rep(1, n-1)), symm=TRUE)
+    #S <- Matrix::Matrix(0, n, n)
+    #doS <- Matrix::Diagonal(n, 1)
     # Close diagonals (jump north-south)
-    inds1 <- 1:(n-1)
-    inds2 <- 2:n
-    sub <- doS[inds2, inds2]
-    S[inds1, inds2] <- sub # Upper
-    S[inds2, inds1] <- S[inds2, inds1] + sub # Lower
+    #inds1 <- 1:(n-1)
+    #inds2 <- 2:n
+    #sub <- doS[inds2, inds2]
+    #S[inds1, inds2] <- sub # Upper
+    #S[inds2, inds1] <- S[inds2, inds1] + sub # Lower
     # Remove top, bottom, land
     S <- remove.no.access(S, n, nx, land)
     # Main diagonal
-    diag(S) <- -apply(S, 1, sum)
+    #S <- S - Matrix::Diagonal(x=Matrix::rowSums(S))
+    diag(S) <- -Matrix::rowSums(S)
     return(S)
 }
 
@@ -142,18 +144,20 @@ make.ew <- function(n, nx, land){
 #' @export
 make.ns <- function(n, nx, land){
     # Skeleton matrix for generator
-    S <- Matrix::Matrix(0, n, n)
-    doS <- Matrix::Diagonal(n, 1)
+    S <- Matrix::bandSparse(n, k = nx, diag = list(rep(1, n-nx)), symm=TRUE)
+    #S <- Matrix::Matrix(0, n, n)
+    #doS <- Matrix::Diagonal(n, 1)
     # Far diagonals (jump east-west)
-    inds1 <- 1:(n-nx)
-    inds2 <- (nx+1):n
-    sub <- doS[inds2, inds2]
-    S[inds1, inds2] <- S[inds1, inds2] + sub # Upper
-    S[inds2, inds1] <- S[inds2, inds1] + sub # Lower
+    #inds1 <- 1:(n-nx)
+    #inds2 <- (nx+1):n
+    #sub <- doS[inds2, inds2]
+    #S[inds1, inds2] <- S[inds1, inds2] + sub # Upper
+    #S[inds2, inds1] <- S[inds2, inds1] + sub # Lower
     # Remove top, bottom, land
     S <- remove.no.access(S, n, nx, land)
     # Main diagonal
-    diag(S) <- -apply(S, 1, sum)
+    #S <- S - Matrix::Diagonal(x=Matrix::rowSums(S))
+    diag(S) <- -Matrix::rowSums(S)
     return(S)
 }
 

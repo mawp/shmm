@@ -72,7 +72,8 @@ make.obj <- function(inp, phase=1){
     obj <- TMB::MakeADFun(data=datlist,
                           parameters=parlist,
                           random=NULL,
-                          DLL=inp$scriptname)
+                          DLL=inp$scriptname,
+                          checkParameterOrder=FALSE)
     # Make TMB quiet
     TMB:::config(trace.optimize=0, DLL=inp$scriptname)
     verbose <- FALSE
