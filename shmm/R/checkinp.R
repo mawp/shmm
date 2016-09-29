@@ -24,9 +24,49 @@
 #' inp <- check.inp(inp)
 #' @export
 check.inp <- function(inp){
+    set.default <- function(inpin, key, val){
+        if (!key %in% names(inpin)){
+            inpin[[key]] <- val
+        }
+        return(inpin)
+    }
 
+    # Check grid
+    if (!'grid' %in% names(inp)){
+        stop('grid not defined!')
+    } else {
+        if (!'xx' %in% names(inp$grid)){
+            stop('xx not specified in inp$grid!')
+        }
+        if (!'yy' %in% names(inp$grid)){
+            stop('yy not specified in inp$grid!')
+        }
+        if (!'nx' %in% names(inp$grid)){
+            stop('nx not specified in inp$grid!')
+        }
+        if (!'ny' %in% names(inp$grid)){
+            stop('ny not specified in inp$grid!')
+        }
+        if (!'dx' %in% names(inp$grid)){
+            stop('dx not specified in inp$grid!')
+        }
+        if (!'dy' %in% names(inp$grid)){
+            stop('dy not specified in inp$grid!')
+        }
+        inp$grid$n <- inp$grid$nx * inp$grid$ny
+    }
+
+    
     inp$scriptname <- 'shmm'
-    if (!'do.sd.report' %in% names(inp)) inp$do.sd.report <- TRUE
+    # Set defaults that were not manually defined
+    inp <- set.default(inp, 'dt', 1)
+    inp <- set.default(inp, 'do.sd.report', TRUE)
+    inp <- set.default(inp, 'dosmoo', 1)
+
+    # Calculate time vector
+    inp$timerange <- range(unlist(inp$time))
+    inp$times <- seq(inp$timerange[1], inp$timerange[2], by=inp$dt)
+    inp$ns <- length(inp$times)
     
     return(inp)
 }

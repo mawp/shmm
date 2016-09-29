@@ -49,8 +49,11 @@ fit.shmm <- function(inp, dbg=0){
     rep$opt <- opt
     rep$obj <- obj
     rep$inp <- inp
+    rep <- get.mean.track(rep)
 
-    if(!is.null(rep)) class(rep) <- "shmmcls"
+    if(!is.null(rep)){
+        class(rep) <- "shmmcls"
+    }
     return(rep)
 }
 
@@ -88,6 +91,7 @@ make.obj <- function(inp, phase=1){
 #' @export
 make.datlist <- function(inp){
     datlist <- list(datlik=inp$datlik$all,
+                    dosmoo=inp$dosmoo,
                     I=inp$gen$I,
                     dt=inp$dt,
                     m=inp$gen$m,
