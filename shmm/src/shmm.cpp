@@ -98,6 +98,8 @@ Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(datlik);     // Data likelihood
   DATA_INTEGER(dosmoo);    // If 1 smoothing is done
+  DATA_INTEGER(ns);        // Number of time steps of solver
+  DATA_VECTOR(iobs);       // Indices to which observations correspond
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
   PARAMETER(logDy);        // log diffusion in north-south (y) direction
 
@@ -120,7 +122,7 @@ Type objective_function<Type>::operator() ()
     shmm::lgam = asVector<double>(getListElement(objective_function::data,"lgam",&isNumeric));
   }
 
-  int nt = datlik.rows();
+  int nobs = datlik.rows();
   int n = datlik.cols();
 
   // // Calculate components for uniformization
@@ -128,23 +130,30 @@ Type objective_function<Type>::operator() ()
   Type Dy = exp(logDy);
 
   // Initialise HMM grids
-  matrix<Type> pred(nt, n);
-  matrix<Type> phi(nt, n);
-  vector<Type> psi(nt-1);
+  matrix<Type> pred(ns, n);
+  matrix<Type> phi(ns, n);
+  vector<Type> psi(nobs - 1);
+  // First state is at time of first observation
   pred.row(0) = datlik.row(0) / datlik.row(0).sum();
   phi.row(0) = pred.row(0);
 
   // Filter loop
-  for(int t=1; t<nt; t++){
+  for(int t=1; t<ns; t++){
     // Time update using uniformization algorithm
     matrix<Type> svec = phi.row(t-1);
     matrix<Type> predtmp = shmm::ForwardProject(svec, Dx, Dy);
     pred.row(t) = predtmp; // Store prediction
     
-    // Data update
-    matrix<Type> post = pred.row(t).cwiseProduct(datlik.row(t)); // Element-wise product
-    psi(t-1) = post.sum(); 
-    phi.row(t) = post / (psi(t-1) + 1e-20); // Add small value to avoid division by zero
+    if (iobs(t) > 0){
+      // Data update
+      int ind = CppAD::Integer(iobs(t)-1);
+      matrix<Type> post = pred.row(t).cwiseProduct(datlik.row(ind)); // Element-wise product
+      psi(ind - 1) = post.sum(); 
+      phi.row(t) = post / (psi(ind - 1) + 1e-20); // Add small value to avoid division by zero
+    } else {
+      // No data update
+      phi.row(t) = pred.row(t);
+    }
   }
 
   // Negative log likelihood
@@ -152,12 +161,12 @@ Type objective_function<Type>::operator() ()
 
   // Smoothing
   // TODO: only run smoothing once after estimation is completed
-  matrix<Type> smoo(nt, n);
+  matrix<Type> smoo(ns, n);
   if (dosmoo == 1){
     // Smoothing loop
-    smoo.row(nt-1) = phi.row(nt-1);
-    for(int t=1; t<nt; t++){
-      int tt = nt - t;
+    smoo.row(ns-1) = phi.row(ns-1);
+    for(int t=1; t<ns; t++){
+      int tt = ns - t;
       // Time update using uniformization algorithm
       matrix<Type> ratio = smoo.row(tt).cwiseQuotient(pred.row(tt));
       matrix<Type> ratiotmp = shmm::ForwardProject(ratio, Dx, Dy);

@@ -4,14 +4,14 @@
 \alias{calc.m}
 \title{Calculate m (number of uniformization iterations)}
 \usage{
-calc.m(inp)
+calc.m(Dx, Dy, dt)
 }
 \arguments{
-\item{grid}{Spatial grid details}
+\item{Dx}{Diffusivity in x-direction}
 
-\item{gen}{Generator details}
+\item{Dy}{Diffusivity in y-direction}
 
-\item{land}{Specification of land cells}
+\item{dt}{Time step}
 }
 \value{
 The number of uniformization iterations

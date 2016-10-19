@@ -4,12 +4,14 @@
 \alias{sim.shmm}
 \title{Simulate movement data}
 \usage{
-sim.shmm(inp, nobs = 40)
+sim.shmm(inp, nobs = 40, dt = NULL)
 }
 \arguments{
 \item{inp}{List with parameters specified in the ini key and time step in the dt key}
 
 \item{nobs}{Optional specification of the number of simulated observations.}
+
+\item{dt}{Time step between observations.}
 }
 \value{
 A list containing the simulated data.

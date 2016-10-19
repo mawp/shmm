@@ -33,7 +33,8 @@ plotshmm.distr <- function(rep, name='smoo', sleep=0.1){
             }
         }
         if ('true' %in% names(rep$inp)){
-            lines(rep$inp$true$X[1:i], rep$inp$true$Y[1:i], col='green')
+            ind <- max(rep$inp$iobs[1:i])
+            lines(rep$inp$true$X[1:ind], rep$inp$true$Y[1:ind], col='green')
         }
         legend('topright', legend=c('True', 'Mean'), lty=1, col=c('green', 'blue'))
         Sys.sleep(sleep)

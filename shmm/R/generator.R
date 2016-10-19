@@ -40,9 +40,10 @@ add.gen <- function(inp){
     inp$gen$Dy <- sd2D(exp(inp$ini$logsdy), inp$grid$dy)
 
     # Calculate m (number of uniformization iterations) if not specified
-    if (!'m' %in% names(inp$gen)){
-        inp$gen$m <- calc.m(inp)
-    }
+    #if (!'m' %in% names(inp$gen)){
+    #    inp$gen$m <- calc.m(inp)
+    #}
+    inp$gen$m <- inp$maxm
 
     # Convert to dgTMatrix (required format by TMB)
     inp$gen$I <- as(diag.sparse(n), 'dgTMatrix')
@@ -66,22 +67,41 @@ diag.sparse <- function(n){
 }
 
 
+#' @name max.rate
+#' @param Dx Diffusivity in x-direction
+#' @param Dy Diffusivity in y-direction
+#' @return Maximum rate
+max.rate <- function(Dx, Dy){
+    return(2*(Dx + Dy))
+}
+
+
 #' @name calc.m
 #' @title Calculate m (number of uniformization iterations)
 #' @details
 #' This uses the expression stated in Grassmann (1977) eq. 10.
 #' Using this m guarantees that the truncation error of elements in a transition
 #' probability matrix is less than 1e-4.
-#' @param grid Spatial grid details
-#' @param gen Generator details
-#' @param land Specification of land cells
+#' @param Dx Diffusivity in x-direction
+#' @param Dy Diffusivity in y-direction
+#' @param dt Time step
 #' @return The number of uniformization iterations
-calc.m <- function(inp){
-    n <- inp$grid$nx * inp$grid$ny
-    AA <- make.generator(inp$grid$nx, inp$grid$ny, inp$gen$Dx, inp$gen$Dy, inp$land)
-    F <- max(abs(AA))
-    m <- ceiling(F*inp$dt + 4*sqrt(F*inp$dt) + 5) # Expression from Grassmann
+calc.m <- function(Dx, Dy, dt){
+    F <- max.rate(Dx, Dy)
+    m <- ceiling(F*dt + 4*sqrt(F*dt) + 5) # Expression from Grassmann
     return(m)
+}
+
+
+#' @name m2rate
+#' @title Calculate rate from m
+#' @param m Value of m.
+#' @return the rate corresponding to m.
+m2rate <- function(m){
+    if (m < 5){
+        stop('m > 4 required')
+    }
+    return((sqrt(ceiling(m)-1) - 2)^2)
 }
 
 

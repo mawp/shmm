@@ -20,6 +20,18 @@
 #' @exportClass shmmcls
 setClass("shmmcls")
 
+#' @param inpin
+#' @param key
+#' @param val Value
+#' @return Modified inpin
+#' @export
+set.default <- function(inpin, key, val){
+    if (!key %in% names(inpin)){
+        inpin[[key]] <- val
+    }
+    return(inpin)
+}
+
 
 #' @name test.shmm
 #' @title Example of a shmm analysis.

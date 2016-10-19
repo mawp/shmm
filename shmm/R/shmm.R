@@ -30,25 +30,26 @@ fit.shmm <- function(inp, dbg=0){
     # Check input list
     inp <- check.inp(inp)
 
-    # Add generator details
-    inp <- add.gen(inp)
-
-    # Create objective function
+    cat('\nCreate objective function...')
     obj <- make.obj(inp)
 
-    # Estimate parameters
+    cat('\nEstimating parameters...')
+    tic <- Sys.time()
     opt <- try(nlminb(obj$par, obj$fn, obj$gr))
+    esttime <- difftime(Sys.time(), tic, unit='secs')
     
-    # Calculate uncertainties
     if (inp$do.sd.report){
+        cat('\nCalculating uncertainties...')
         rep <- try(TMB::sdreport(obj))
     } else {
         rep <- list()
     }
 
+    rep$estimation.time <- esttime
     rep$opt <- opt
     rep$obj <- obj
     rep$inp <- inp
+    cat('\nCalculating track...')
     rep <- get.mean.track(rep)
 
     if(!is.null(rep)){
@@ -93,6 +94,8 @@ make.obj <- function(inp, phase=1){
 make.datlist <- function(inp){
     datlist <- list(datlik=inp$datlik$all,
                     dosmoo=inp$dosmoo,
+                    ns=inp$ns,
+                    iobs=inp$iobs,
                     I=inp$gen$I,
                     dt=inp$dt,
                     m=inp$gen$m,

@@ -30,18 +30,20 @@ calc.data.likelihood <- function(inp){
     inp <- check.inp(inp)
     
     if (inp$datatype == 'xy'){
-        inp$datlik$xy <- array(0, dim=c(inp$ns, inp$grid$nx, inp$grid$ny))
-        for (i in 1:inp$ns){
+        nobs <- length(inp$obs$X)
+        inp$datlik$xy <- array(0, dim=c(nobs, inp$grid$nx, inp$grid$ny))
+        for (i in 1:nobs){
             inp$datlik$xy[i, , ] <- outer(dnorm(inp$grid$xx, inp$obs$X[i], inp$osd),
                                           dnorm(inp$grid$yy, inp$obs$Y[i], inp$osd))
         }
     }
 
     # Combined data likelihood for all data types
-    inp$datlik$all <- matrix(0, inp$ns, inp$grid$n)
-    for (i in 1:inp$ns){
+    # NOT DONE
+    inp$datlik$all <- matrix(0, nobs, inp$grid$n)
+    for (i in 1:nobs){
         inp$datlik$all[i, ] <- as.vector(inp$datlik$xy[i, , ])
     }
-
+    
     return(inp)
 }

@@ -20,17 +20,23 @@
 #' @details Simulates data
 #' @param inp List with parameters specified in the ini key and time step in the dt key
 #' @param nobs Optional specification of the number of simulated observations.
+#' @param dt Time step between observations.
 #' @return A list containing the simulated data.
 #' @examples
 #' sim <- sim.shmm(inp)
 #' @export
-sim.shmm <- function(inp, nobs=40){
+sim.shmm <- function(inp, nobs=40, dt=NULL){
     sim <- inp
     sim$true <- inp$ini
+    if (is.null(dt)){
+        sim <- set.default(inp, 'simdt', 1)
+    } else {
+        sim$simdt <- dt
+    }
     
     if (inp$datatype == 'xy'){
-        Xx <- cumsum(rnorm(nobs, 0, exp(inp$ini$logsdx)*sqrt(inp$dt)))
-        Xy <- cumsum(rnorm(nobs, 0, exp(inp$ini$logsdy)*sqrt(inp$dt)))
+        Xx <- cumsum(rnorm(nobs, 0, exp(inp$ini$logsdx)*sqrt(sim$simdt)))
+        Xy <- cumsum(rnorm(nobs, 0, exp(inp$ini$logsdy)*sqrt(sim$simdt)))
         Yx <- Xx + rnorm(nobs, 0, inp$osd)
         Yy <- Xy + rnorm(nobs, 0, inp$osd)
         # Store simulation
@@ -38,8 +44,8 @@ sim.shmm <- function(inp, nobs=40){
         sim$true$Y <- Xy
         sim$obs$X <- Yx
         sim$obs$Y <- Yy
-        sim$time$X <- 1:nobs
-        sim$time$Y <- 1:nobs
+        sim$obstime$xy <- seq(1, nobs, by=sim$simdt)
+        #sim$obstime$Y <- seq(1, nobs, by=sim$simdt)
     }
 
     #sim <- check.inp(sim)

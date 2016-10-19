@@ -24,12 +24,6 @@
 #' inp <- check.inp(inp)
 #' @export
 check.inp <- function(inp){
-    set.default <- function(inpin, key, val){
-        if (!key %in% names(inpin)){
-            inpin[[key]] <- val
-        }
-        return(inpin)
-    }
 
     # Check grid
     if (!'grid' %in% names(inp)){
@@ -56,17 +50,28 @@ check.inp <- function(inp){
         inp$grid$n <- inp$grid$nx * inp$grid$ny
     }
 
-    
     inp$scriptname <- 'shmm'
     # Set defaults that were not manually defined
     inp <- set.default(inp, 'dt', 1)
     inp <- set.default(inp, 'do.sd.report', TRUE)
     inp <- set.default(inp, 'dosmoo', 1)
+    inp <- set.default(inp, 'maxm', 20)
+
+    # Add generator details
+    inp <- add.gen(inp)
 
     # Calculate time vector
-    inp$timerange <- range(unlist(inp$time))
-    inp$times <- seq(inp$timerange[1], inp$timerange[2], by=inp$dt)
-    inp$ns <- length(inp$times)
-    
+    F <- max.rate(inp$gen$Dx, inp$gen$Dy)
+    maxF <- m2rate(inp$gen$m)
+    dt <- maxF / F
+    inp$dt <- 1/ceiling(1/dt) # Find a "proper" dt
+    inp$timerange <- range(unlist(inp$obstime))
+    inp$time <- seq(inp$timerange[1], inp$timerange[2], by=inp$dt)
+    inp$ns <- length(inp$time)
+
+    # Calculate iobs
+    timeobs <- inp$obstime$xy # Extend this to accommodate more data types
+    inp$iobs <- match(inp$time, timeobs, nomatch=0)
+
     return(inp)
 }
