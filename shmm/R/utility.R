@@ -20,8 +20,11 @@
 #' @exportClass shmmcls
 setClass("shmmcls")
 
-#' @param inpin
-#' @param key
+
+#' @name set.default
+#' @title Set default parameter value
+#' @param inpin Input list
+#' @param key Key of list
 #' @param val Value
 #' @return Modified inpin
 #' @export

@@ -2,6 +2,7 @@
 % Please edit documentation in R/generator.R
 \name{max.rate}
 \alias{max.rate}
+\title{Calculate maximum rate}
 \usage{
 \method{max}{rate}(Dx, Dy)
 }

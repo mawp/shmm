@@ -4,18 +4,10 @@
 \alias{make.generator}
 \title{Create generator}
 \usage{
-make.generator(nx, ny, Dx, Dy, land = NULL)
+make.generator(inp)
 }
 \arguments{
-\item{nx}{Number of grid cells in x-direction}
-
-\item{ny}{Number of grid cells in y-direction}
-
-\item{Dx}{Diffusivity in x-direction}
-
-\item{Dy}{Diffusivity in y-direction}
-
-\item{land}{Vector containing linear indices of land cells.}
+\item{inp}{Input list.}
 }
 \value{
 Generator as sparse matrix.

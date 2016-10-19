@@ -68,6 +68,7 @@ diag.sparse <- function(n){
 
 
 #' @name max.rate
+#' @title Calculate maximum rate
 #' @param Dx Diffusivity in x-direction
 #' @param Dy Diffusivity in y-direction
 #' @return Maximum rate
@@ -107,17 +108,21 @@ m2rate <- function(m){
 
 #' @name make.generator
 #' @title Create generator
-#' @param nx Number of grid cells in x-direction
-#' @param ny Number of grid cells in y-direction
-#' @param Dx Diffusivity in x-direction
-#' @param Dy Diffusivity in y-direction
-#' @param land Vector containing linear indices of land cells.
+#' @param inp Input list.
 #' @return Generator as sparse matrix.
 #' @export
-make.generator <- function(nx, ny, Dx, Dy, land=NULL){
-    #Dx <- 0.5 * (sdx/dx)^2;  # East west move rate (diffusion)
-    #Dy <- 0.5 * (sdy/dy)^2;  # North south move rate (diffusion)
+make.generator <- function(inp){
+    nx <- inp$grid$nx
+    ny <- inp$grid$ny
     n <- nx*ny
+    land <- inp$land
+    
+    # Diffusivity
+    # East west move rate (diffusion)
+    Dx <- sd2D(exp(inp$ini$logsdx), inp$grid$dx)
+    # North south move rate (diffusion)
+    Dy <- sd2D(exp(inp$ini$logsdy), inp$grid$dy)
+
     # Close diagonals (jump north-south)
     Sns <- make.ns(n, nx, land)
     # Far diagonals (jump east-west)
@@ -138,18 +143,9 @@ make.generator <- function(nx, ny, Dx, Dy, land=NULL){
 make.ew <- function(n, nx, land){
     # Skeleton matrix for generator
     S <- Matrix::bandSparse(n, k = 1, diag = list(rep(1, n-1)), symm=TRUE)
-    #S <- Matrix::Matrix(0, n, n)
-    #doS <- Matrix::Diagonal(n, 1)
-    # Close diagonals (jump north-south)
-    #inds1 <- 1:(n-1)
-    #inds2 <- 2:n
-    #sub <- doS[inds2, inds2]
-    #S[inds1, inds2] <- sub # Upper
-    #S[inds2, inds1] <- S[inds2, inds1] + sub # Lower
     # Remove top, bottom, land
     S <- remove.no.access(S, n, nx, land)
     # Main diagonal
-    #S <- S - Matrix::Diagonal(x=Matrix::rowSums(S))
     diag(S) <- -Matrix::rowSums(S)
     return(S)
 }
@@ -165,18 +161,9 @@ make.ew <- function(n, nx, land){
 make.ns <- function(n, nx, land){
     # Skeleton matrix for generator
     S <- Matrix::bandSparse(n, k = nx, diag = list(rep(1, n-nx)), symm=TRUE)
-    #S <- Matrix::Matrix(0, n, n)
-    #doS <- Matrix::Diagonal(n, 1)
-    # Far diagonals (jump east-west)
-    #inds1 <- 1:(n-nx)
-    #inds2 <- (nx+1):n
-    #sub <- doS[inds2, inds2]
-    #S[inds1, inds2] <- S[inds1, inds2] + sub # Upper
-    #S[inds2, inds1] <- S[inds2, inds1] + sub # Lower
     # Remove top, bottom, land
     S <- remove.no.access(S, n, nx, land)
     # Main diagonal
-    #S <- S - Matrix::Diagonal(x=Matrix::rowSums(S))
     diag(S) <- -Matrix::rowSums(S)
     return(S)
 }

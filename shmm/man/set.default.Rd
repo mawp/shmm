@@ -2,10 +2,15 @@
 % Please edit documentation in R/utility.R
 \name{set.default}
 \alias{set.default}
+\title{Set default parameter value}
 \usage{
 set.default(inpin, key, val)
 }
 \arguments{
+\item{inpin}{Input list}
+
+\item{key}{Key of list}
+
 \item{val}{Value}
 }
 \value{
