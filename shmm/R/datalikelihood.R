@@ -55,7 +55,8 @@ calc.data.likelihood <- function(inp){
         inds <- match(obstime, time)
         c <- 1 # Counter
         for (i in inds){
-            inp$datlik$all[i, ] <- inp$datlik$all[i, ] * as.vector(inp$datlik[[nm]][c, , ])
+            distr <- inp$datlik[[nm]][c, , ]
+            inp$datlik$all[i, ] <- inp$datlik$all[i, ] * as.vector(distr[!inp$land])
             c <- c+1
         }
     }

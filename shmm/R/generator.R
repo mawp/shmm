@@ -27,7 +27,7 @@
 add.gen <- function(inp){
     nx <- inp$grid$nx
     ny <- inp$grid$ny
-    n <- nx*ny
+    n <- nx * ny
 
     # Close diagonals (jump north-south)
     Sns <- make.ns(n, nx, inp$land)
@@ -49,6 +49,12 @@ add.gen <- function(inp){
     inp$gen$I <- as(diag.sparse(n), 'dgTMatrix')
     inp$gen$Sew <- as(Sew, 'dgTMatrix')
     inp$gen$Sns <- as(Sns, 'dgTMatrix')
+
+    # Remove land
+    landinds <- which(inp$land)
+    inp$gen$I <- inp$gen$I[-landinds, -landinds]
+    inp$gen$Sns <- inp$gen$Sns[-landinds, -landinds]
+    inp$gen$Sew <- inp$gen$Sew[-landinds, -landinds]
 
     inp$gen$lgam <- lgamma(2:(inp$gen$m+2)) # Factorial
     
@@ -185,10 +191,11 @@ remove.no.access <- function(S, n, nx, land){
     bot <- seq(nx, n-nx, by=nx)
     S[bot, bot+1] <- 0
     # Remove land
-    if(length(land) != 0){
-        S[land, ] <- 0
-        S[, land] <- 0
-    }
+    #landinds <- which(land)
+    #if(length(landinds) > 0){
+    #    S[landinds, ] <- 0
+    #    S[, landinds] <- 0
+    #}
     return(S)
 }
 

@@ -47,7 +47,7 @@ check.inp <- function(inp){
         if (!'dy' %in% names(inp$grid)){
             stop('dy not specified in inp$grid!')
         }
-        inp$grid$n <- inp$grid$nx * inp$grid$ny
+        #inp$grid$n <- inp$grid$nx * inp$grid$ny # Only true if no land
     }
 
     inp$scriptname <- 'shmm'
@@ -57,6 +57,13 @@ check.inp <- function(inp){
     inp <- set.default(inp, 'dosmoo', 1)
     inp <- set.default(inp, 'maxm', 20)
 
+    # Set default land if unspecified
+    if (!'land' %in% names(inp)){
+        warning('Land matrix not specified! use find.land() if relevant.')
+    }
+    inp <- set.default(inp, 'land', matrix(FALSE, inp$grid$ny, inp$grid$nx))
+    inp$grid$n <- sum(!inp$land)
+    
     # Add generator details
     inp <- add.gen(inp)
 

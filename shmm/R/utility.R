@@ -20,6 +20,63 @@
 #' @exportClass shmmcls
 setClass("shmmcls")
 
+#' @name ind2sub
+#' @title Linear index to subscripts
+#' @param ind Linear index
+#' @param nrows Number of rows
+#' @return Subscripts
+#' @export
+ind2sub <- function(ind, nrows){
+    return(list(r = ((ind-1) %% nrows) + 1,
+                c = floor((ind-1) / nrows) + 1))
+}
+
+
+#' @name find.land
+#' @title Function to remove lakes etc.
+#' @param nas Matrix containing NAs at land cells
+#' @param do.plot Plot progress
+#' @return Matrix containing TRUE at land and FALSE at connected water.
+#' @export
+find.land <- function(nas, do.plot=FALSE){
+    nrows <- nrow(nas)
+    ncols <- ncol(nas)
+    land1 <- matrix(0, nrow=nrows, ncol=ncols)
+    land2 <- matrix(0, nrow=nrows, ncol=ncols)
+    rs <- round(nrows/2)
+    cs <- round(ncols/2)
+    land2[rs, cs] <- 1
+    I <- c(1, 0, -1, 0)
+    J <- c(0, 1, 0, -1)
+    ninds <- 1
+    while (ninds > 0){
+        inds <- which(land1 != land2)
+        sub <- ind2sub(inds, nrows)
+        ninds <- length(inds)
+        land1 <- land2 # Store old
+        if (ninds > 0){
+            for (i in 1:ninds){
+                ii <- sub$r[i]
+                jj <- sub$c[i]
+                for (j in 1:4){
+                    iii <- max(min(ii + I[j], nrows), 1)
+                    jjj <- max(min(jj + J[j], ncols), 1)
+                    if (!nas[iii, jjj] & land2[iii, jjj]!=1){
+                        land2[iii, jjj] <- 1
+                    }
+                }
+            }
+        }
+        if (do.plot){
+            par(mfrow=c(2, 2))
+            image(land1)
+            image(land2)
+            image(land1!=land2)
+        }
+    }
+    return(land2 == 0)
+}
+
 
 
 #' @name time.fac

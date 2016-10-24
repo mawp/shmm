@@ -14,7 +14,7 @@ calc.data.likelihood(inp)
 \item{exp}{Take exp of the variable? TRUE/FALSE.}
 }
 \value{
-A matrix with four columns containing respectively: 1) the lower 95% confidence limit; 2) the parameter estimate; 3) the upper 95% confidence limit; 4) the parameter standard deviation in the domain it was estimated (log or non-log).
+Input list containing combined data likelihood of all data sources. Format is a matrix where nrow is equal to number of time steps, and ncol is equal to the total number of grid cells.
 }
 \details{
 Calculate data likelihood

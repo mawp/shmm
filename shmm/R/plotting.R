@@ -26,7 +26,7 @@
 plotshmm.distr <- function(rep, name='smoo', sleep=0.1){
     dis <- get.distr(name, rep)
     for (i in 1:rep$inp$ns){
-        image(rep$inp$grid$xx, rep$inp$grid$yy, -dis[i, , ], xlab='X', ylab='Y')
+        image(rep$inp$grid$xx, rep$inp$grid$yy, -dis[i, , ], xlab='X', ylab='Y', main=i)
         if ('tracks' %in% names(rep)){
             if ('Xmean' %in% names(rep$tracks) & 'Ymean' %in% names(rep$tracks)){
                 lines(rep$tracks$Xmean[1:i], rep$tracks$Ymean[1:i], col='blue')
