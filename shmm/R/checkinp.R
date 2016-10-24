@@ -53,7 +53,7 @@ check.inp <- function(inp){
     inp$scriptname <- 'shmm'
     # Set defaults that were not manually defined
     inp <- set.default(inp, 'dt', 1)
-    inp <- set.default(inp, 'do.sd.report', TRUE)
+    inp <- set.default(inp, 'do.sd.report', FALSE) # FALSE to save time
     inp <- set.default(inp, 'dosmoo', 1)
     inp <- set.default(inp, 'maxm', 20)
 
@@ -65,13 +65,14 @@ check.inp <- function(inp){
     maxF <- m2rate(inp$gen$m)
     dt <- maxF / F
     inp$dt <- 1/ceiling(1/dt) # Find a "proper" dt
-    inp$timerange <- range(unlist(inp$obstime))
+    fac <- time.fac()
+    inp$timerange <- range(unlist(inp$obstime)) / fac
     inp$time <- seq(inp$timerange[1], inp$timerange[2], by=inp$dt)
     inp$ns <- length(inp$time)
 
     # Calculate iobs
-    timeobs <- inp$obstime$xy # Extend this to accommodate more data types
-    inp$iobs <- match(inp$time, timeobs, nomatch=0)
+    inp$obstimeall <- unique(unlist(inp$obstime)) / fac
+    inp$iobs <- match(inp$time, inp$obstimeall, nomatch=0)
 
     return(inp)
 }

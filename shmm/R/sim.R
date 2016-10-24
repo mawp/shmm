@@ -44,7 +44,7 @@ sim.shmm <- function(inp, nobs=40, dt=NULL){
         sim$true$Y <- Xy
         sim$obs$X <- Yx
         sim$obs$Y <- Yy
-        sim$obstime$xy <- seq(1, nobs, by=sim$simdt)
+        sim$obstime$xy <- seq(1, nobs, by=sim$simdt) * time.fac()
         #sim$obstime$Y <- seq(1, nobs, by=sim$simdt)
     }
 

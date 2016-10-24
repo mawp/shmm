@@ -21,6 +21,15 @@
 setClass("shmmcls")
 
 
+
+#' @name time.fac
+#' @title Number of seconds in a day
+#' @return Number of seconds in a day
+#' @export
+time.fac <- function(){
+    return(24 * 60 * 60)
+}
+
 #' @name set.default
 #' @title Set default parameter value
 #' @param inpin Input list
@@ -145,7 +154,7 @@ get.distr <- function(name, rep){
 #' @export
 get.mean.track <- function(rep){
     if (rep$inp$dosmoo == 1){
-        smoo <- get.distr('smoo', rep)
+        smoo <- get.distr('phi', rep)
         Xmean <- numeric(rep$inp$ns)
         Ymean <- numeric(rep$inp$ns)
         for (t in 1:rep$inp$ns){
