@@ -21,9 +21,10 @@
 #' @param rep Result of running fit.shmm.
 #' @param name Name of the distribution to plot. Either 'phi', 'pred' or 'smoo'.
 #' @param sleep Number of seconds to pause between each frame of the animation.
+#' @param add.map Add map?
 #' @return Noting.
 #' @export
-plotshmm.distr <- function(rep, name='smoo', sleep=0.1){
+plotshmm.distr <- function(rep, name='smoo', sleep=0.1, add.map=TRUE){
     distr <- rep$report[[name]]
     nt <- dim(distr)[1]
     for (i in 1:nt){
@@ -39,6 +40,9 @@ plotshmm.distr <- function(rep, name='smoo', sleep=0.1){
                    col=c('green', 'blue'), bg='white')
         } else {
             legend('topright', legend='Mean', lty=1, col='blue', bg='white')
+        }
+        if (add.map){
+            maps::map(add=TRUE)
         }
         Sys.sleep(sleep)
     }

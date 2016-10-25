@@ -33,6 +33,7 @@ calc.data.likelihood <- function(inp){
     dt <- min(diff(inp$obstimeall))
     time <- seq(min(inp$obstimeall), max(inp$obstimeall), by=dt)
     nt <- length(time)
+    inp$date <- as.POSIXct(time*24*60*60, origin='1970-01-01')
     
     if ('xy' %in% inp$datatypes & !'xy' %in% names(inp$datlik)){
         nobs <- length(inp$obs$X)
@@ -46,7 +47,11 @@ calc.data.likelihood <- function(inp){
     if ('sst' %in% inp$datatypes & !'sst' %in% names(inp$datlik)){
         # Add code to calculate SST datlik
     }
-    
+
+    if ('lon' %in% inp$datatypes & !'lon' %in% names(inp$datlik)){
+        # Add code to calculate Lon datlik
+    }
+
     # Combined data likelihood for all data types
     # NOT DONE
     inp$datlik$all <- matrix(1, nt, inp$grid$n)

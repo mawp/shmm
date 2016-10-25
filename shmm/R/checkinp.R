@@ -78,7 +78,7 @@ check.inp <- function(inp){
     inp$ns <- length(inp$time)
 
     # Calculate iobs
-    inp$obstimeall <- unique(unlist(inp$obstime)) / fac
+    inp$obstimeall <- sort(unique(unlist(inp$obstime))) / fac
     inp$iobs <- match(inp$time, inp$obstimeall, nomatch=0)
 
     return(inp)
