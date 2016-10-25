@@ -165,10 +165,20 @@ Type objective_function<Type>::operator() ()
   if (dosmoo == 1){
     // Smoothing loop
     smoo.row(ns-1) = phi.row(ns-1);
-    for(int t=1; t<ns; t++){
+    for(int t=1; t < ns; t++){
       int tt = ns - t;
       // Time update using uniformization algorithm
-      matrix<Type> ratio = smoo.row(tt).cwiseQuotient(pred.row(tt));
+      matrix<Type> predrow = pred.row(tt);
+      for (int i=0; i < n; i++){
+	predrow(0, i) += 1e-10;
+      }
+      matrix<Type> ratio = smoo.row(tt).cwiseQuotient(predrow);
+      //matrix<double> asd(1, n);
+      //for (int i=0; i < n; i++){
+      //asd(0, i) = std::isnan(asDouble(ratio(0, i)));
+	//cout 
+      //}
+      //matrix<double> asd = std::isnan(asDouble(ratio));
       matrix<Type> ratiotmp = shmm::ForwardProject(ratio, Dx, Dy);
       matrix<Type> post = phi.row(tt-1).cwiseProduct(ratiotmp);
       post = post / (post.sum() + 1e-20);
@@ -176,11 +186,24 @@ Type objective_function<Type>::operator() ()
     }
   }
 
+  // Store a subset of distribution for output
+  matrix<Type> smooout(nobs, n);
+  matrix<Type> phiout(nobs, n);
+  matrix<Type> predout(nobs, n);
+  for(int t=0; t<ns; t++){
+    if (iobs(t) > 0){
+      int ind = CppAD::Integer(iobs(t)-1);
+      smooout.row(ind) = smoo.row(t);
+      phiout.row(ind) = phi.row(t);
+      predout.row(ind) = pred.row(t);
+    }
+  }
+
   // Reports
-  REPORT(pred);
-  REPORT(phi);
+  REPORT(predout);
+  REPORT(phiout);
   REPORT(psi);
-  REPORT(smoo);
+  REPORT(smooout);
 
   return ans;
 }

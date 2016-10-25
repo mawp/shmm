@@ -54,7 +54,7 @@ check.inp <- function(inp){
     # Set defaults that were not manually defined
     inp <- set.default(inp, 'dt', 1)
     inp <- set.default(inp, 'do.sd.report', FALSE) # FALSE to save time
-    inp <- set.default(inp, 'dosmoo', 1)
+    #inp <- set.default(inp, 'dosmoo', 1)
     inp <- set.default(inp, 'maxm', 20)
 
     # Set default land if unspecified

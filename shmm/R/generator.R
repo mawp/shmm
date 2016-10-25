@@ -52,9 +52,11 @@ add.gen <- function(inp){
 
     # Remove land
     landinds <- which(inp$land)
-    inp$gen$I <- inp$gen$I[-landinds, -landinds]
-    inp$gen$Sns <- inp$gen$Sns[-landinds, -landinds]
-    inp$gen$Sew <- inp$gen$Sew[-landinds, -landinds]
+    if (length(landinds) > 0){
+        inp$gen$I <- inp$gen$I[-landinds, -landinds]
+        inp$gen$Sns <- inp$gen$Sns[-landinds, -landinds]
+        inp$gen$Sew <- inp$gen$Sew[-landinds, -landinds]
+    }
 
     inp$gen$lgam <- lgamma(2:(inp$gen$m+2)) # Factorial
     

@@ -185,24 +185,28 @@ invlogit <- function(a) 1/(1+exp(-a))
 invlogp1 <- function(a) 1 + exp(a)
 
 
-#' @name get.distr
-#' @title Extract distribution from rep
-#' @param name Name of the distribution to plot. Either 'phi', 'pred' or 'smoo'.
+#' @name format.distr
+#' @title Format distribution from flattened time x vector (2D) to time x matrix (3D).
+#' @param vecdistr Distribution to be formatted
 #' @param rep Result of running fit.shmm.
 #' @return The requested distribution as an 3D-array.
 #' @export
-get.distr <- function(name, rep){
-    if (name %in% names(rep$obj$report())){
-        vecdistr <- rep$obj$report()[[name]]
-        distr <- array(0, dim=c(rep$inp$ns, rep$inp$grid$nx, rep$inp$grid$ny))
-        for (i in 1:rep$inp$ns){
+format.distr <- function(vecdistr, rep){
+    nt <- dim(vecdistr)[1]
+    distr <- array(0, dim=c(nt, rep$inp$grid$nx, rep$inp$grid$ny))
+    landinds <- which(rep$inp$land)
+    for (i in 1:nt){
+        if (length(landinds) > 0){
+            temp <- matrix(0, rep$inp$grid$nx, rep$inp$grid$ny)
+            temp[-landinds] <- vecdistr[i, ]
+            distr[i, , ] <- temp
+        } else {
             distr[i, , ] <- matrix(vecdistr[i, ], rep$inp$grid$nx, rep$inp$grid$ny)
         }
-        return(distr)
-    } else {
-        stop(name, 'not in names(rep$obj$report()!')
     }
+    return(distr)
 }
+
 
 #' @name get.mean.track
 #' @title Calculate an estimated track from the mean of the smoothed distribution.
@@ -210,19 +214,20 @@ get.distr <- function(name, rep){
 #' @return A list containing 
 #' @export
 get.mean.track <- function(rep){
-    if (rep$inp$dosmoo == 1){
-        smoo <- get.distr('phi', rep)
-        Xmean <- numeric(rep$inp$ns)
-        Ymean <- numeric(rep$inp$ns)
-        for (t in 1:rep$inp$ns){
-            Xmean[t] <- sum(apply(smoo[t, , ], 1, sum) * rep$inp$grid$xx)
-            Ymean[t] <- sum(apply(smoo[t, , ], 2, sum) * rep$inp$grid$yy)
-        }
-        rep$tracks$Xmean <- Xmean
-        rep$tracks$Ymean <- Ymean
+    if (rep$dosmoo == 1){
+        distr <- rep$report$smoo
     } else {
-        warning('Could not calculate mean track as dosmoo != 1')
+        distr <- rep$report$phi
     }
+    nt <- dim(distr)[1]
+    Xmean <- numeric(nt)
+    Ymean <- numeric(nt)
+    for (t in 1:nt){
+        Xmean[t] <- sum(apply(distr[t, , ], 1, sum) * rep$inp$grid$xx)
+        Ymean[t] <- sum(apply(distr[t, , ], 2, sum) * rep$inp$grid$yy)
+    }
+    rep$tracks$Xmean <- Xmean
+    rep$tracks$Ymean <- Ymean
     return(rep)
 }
 

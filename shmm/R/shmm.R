@@ -26,35 +26,54 @@
 #' rep <- fit.shmm(inp)
 #' @import TMB
 fit.shmm <- function(inp, dbg=0){
-    rep <- NULL
     # Check input list
     inp <- check.inp(inp)
-
+    rep <- list(inp=inp)
+    
     cat('\nCreate objective function...')
-    obj <- make.obj(inp)
+    obj <- make.obj(inp) # Smoothing not performed here
 
     cat('\nEstimating parameters...')
     tic <- Sys.time()
-    opt <- try(nlminb(obj$par, obj$fn, obj$gr))
-    esttime <- difftime(Sys.time(), tic, unit='secs')
+    rep$opt <- try(nlminb(obj$par, obj$fn, obj$gr))
+    rep$estimation.time <- difftime(Sys.time(), tic, unit='secs')
+    rep$dosmoo <- 1
+
+    #cat('\nSmoothing...')
+    #obj$env$data$dosmoo <- 1 # Smooth now
+    #nouse <- obj$fn() # Evaluate fn to do smoothing
+    #inp2 <- inp
+    #obj2 <- make.obj(inp2) # Smoothing not performed here
+    #obj2$env$data$dosmoo <- 1 # Smooth now
+    #nouse <- obj2$fn(obj$env$last.par.best) # Evaluate fn to do smoothing
+    #report <- obj2$report()
+    
+    cat('\nSave report...')
+    rep$report <- obj$report()
+    for (nm in names(rep$report)){
+        if (nm != 'psi'){
+            nmpl <- sub('out', '', nm)
+            vecdistr <- rep$report[[nm]]
+            if (length(dim(vecdistr)) == 2){
+                rep$report[[nmpl]] <- format.distr(vecdistr, rep)
+                #rep$report[[nm]] <- NULL
+            }
+        }
+    }
     
     if (inp$do.sd.report){
         cat('\nCalculating uncertainties...')
         rep <- try(TMB::sdreport(obj))
-    } else {
-        rep <- list()
     }
 
-    rep$estimation.time <- esttime
-    rep$opt <- opt
     rep$obj <- obj
-    rep$inp <- inp
     cat('\nCalculating track...')
     rep <- get.mean.track(rep)
 
     if(!is.null(rep)){
         class(rep) <- "shmmcls"
     }
+    cat('\n')
     return(rep)
 }
 
@@ -93,7 +112,7 @@ make.obj <- function(inp, phase=1){
 #' @export
 make.datlist <- function(inp){
     datlist <- list(datlik=inp$datlik$all,
-                    dosmoo=inp$dosmoo,
+                    dosmoo=1,
                     ns=inp$ns,
                     iobs=inp$iobs,
                     I=inp$gen$I,
