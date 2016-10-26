@@ -30,14 +30,13 @@ fit.shmm <- function(inp, dbg=0){
     inp <- check.inp(inp)
     rep <- list(inp=inp)
     
+    tic <- Sys.time()
     cat('\nCreate objective function...')
     obj <- make.obj(inp) # Smoothing not performed here
 
     if (inp$do.estimation){
         cat('\nEstimating parameters...')
-        tic <- Sys.time()
         rep$opt <- try(nlminb(obj$par, obj$fn, obj$gr))
-        rep$estimation.time <- difftime(Sys.time(), tic, unit='secs')
     } else {
         cat('\nEvaluating for fixed parameters...')
         nouse <- obj$fn() # Evaluate fn for initial parameters
@@ -75,6 +74,8 @@ fit.shmm <- function(inp, dbg=0){
     cat('\nCalculating track...')
     rep <- get.mean.track(rep)
 
+    rep$computing.time <- difftime(Sys.time(), tic, unit='secs')
+    
     if(!is.null(rep)){
         class(rep) <- "shmmcls"
     }
@@ -118,6 +119,7 @@ make.obj <- function(inp, phase=1){
 make.datlist <- function(inp){
     datlist <- list(datlik=inp$datlik$all,
                     dosmoo=1,
+                    solvetype=inp$solvetypein,
                     ns=inp$ns,
                     iobs=inp$iobs,
                     I=inp$gen$I,

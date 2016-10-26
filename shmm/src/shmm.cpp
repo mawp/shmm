@@ -43,6 +43,54 @@ namespace shmm {
 
   // Build generator and project state one step forward
   template<class Type>
+  matrix<Type> forwardProjecti(matrix<Type> svec, Type Dx, Type Dy){
+    // Cast required 'double' objects to 'Type'
+    Eigen::SparseMatrix<Type>   I = shmm::  I.cast<Type>();
+    Eigen::SparseMatrix<Type> Sns = shmm::Sns.cast<Type>();
+    Eigen::SparseMatrix<Type> Sew = shmm::Sew.cast<Type>();
+    Type                       dt = shmm::dt;
+    vector<Type>             lgam = shmm::lgam.cast<Type>();
+
+    // Build generator
+    Type F = 2 * (Dx + Dy); // Absolute largest jump rate, max(abs(diag(G)))
+    Eigen::SparseMatrix<Type> G = Dx*Sew + Dy*Sns; // Make generator
+
+    matrix<Type> predtmp = svec; // Initialise
+ 
+    // Implicit solving
+    Eigen::SimplicialLLT<Eigen::SparseMatrix<Type> > solver(I - G*dt);
+    predtmp = solver.solve(svec.transpose());
+    predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
+
+    return predtmp;
+  }
+  //};
+
+  // Wrapper: vector input -> vector output
+  template<class Type>
+  vector<Type> forwardProjecti(vector<Type> input){
+    shmm_parms<Type> parms;
+    parms = input;
+    vector<Type> output(parms.svec.size());
+    output << forwardProjecti(parms.svec, parms.Dx, parms.Dy).vec();
+    return output;
+  }
+  REGISTER_ATOMIC(forwardProjecti)
+
+  // User version
+  template<class Type>
+  matrix<Type> ForwardProjecti(matrix<Type> svec, Type Dx, Type Dy){
+    shmm_parms<Type> parms = {svec, Dx, Dy};
+    vector<Type> x = parms;
+    vector<Type> y = forwardProjecti(x);
+    matrix<Type> out(1, y.size());
+    out << y.transpose();
+    return out;
+  }
+
+
+  // Build generator and project state one step forward
+  template<class Type>
   matrix<Type> forwardProject(matrix<Type> svec, Type Dx, Type Dy){
     // Cast required 'double' objects to 'Type'
     Eigen::SparseMatrix<Type>   I = shmm::  I.cast<Type>();
@@ -54,20 +102,25 @@ namespace shmm {
     // Build generator
     Type F = 2 * (Dx + Dy); // Absolute largest jump rate, max(abs(diag(G)))
     Eigen::SparseMatrix<Type> G = Dx*Sew + Dy*Sns; // Make generator
+
+    matrix<Type> predtmp = svec; // Initialise
+
+    // -- Uniformisation begins --
     Eigen::SparseMatrix<Type> P = G/F + I; // Sub-stochastic matrix
     Eigen::SparseMatrix<Type> FPdt = F*P*Type(dt);
-
     // One-step forward
-    matrix<Type> predtmp = svec;
+    //matrix<Type> predtmp = svec;
     for(int i=0; i<m; i++){
       svec = svec * FPdt; // Vector x Matrix (this can be optimised?)
       predtmp = predtmp + svec/exp(lgam(i)); // exp(lgamma()) is factorial
     }
     predtmp = predtmp * exp(-F*dt);
     predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
+    // -- Uniformisation end --
+
     return predtmp;
   }
-//};
+  //};
 
   // Wrapper: vector input -> vector output
   template<class Type>
@@ -98,6 +151,7 @@ Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(datlik);     // Data likelihood
   DATA_INTEGER(dosmoo);    // If 1 smoothing is done
+  DATA_INTEGER(solvetype); // Type of solver to use
   DATA_INTEGER(ns);        // Number of time steps of solver
   DATA_VECTOR(iobs);       // Indices to which observations correspond
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
@@ -141,7 +195,12 @@ Type objective_function<Type>::operator() ()
   for(int t=1; t<ns; t++){
     // Time update using uniformization algorithm
     matrix<Type> svec = phi.row(t-1);
-    matrix<Type> predtmp = shmm::ForwardProject(svec, Dx, Dy);
+    matrix<Type> predtmp = svec;
+    if (solvetype == 1){
+      predtmp = shmm::ForwardProject(svec, Dx, Dy);
+    } else {
+      predtmp = shmm::ForwardProjecti(svec, Dx, Dy);
+    }
     pred.row(t) = predtmp; // Store prediction
     
     if (iobs(t) > 0){
@@ -179,7 +238,12 @@ Type objective_function<Type>::operator() ()
 	//cout 
       //}
       //matrix<double> asd = std::isnan(asDouble(ratio));
-      matrix<Type> ratiotmp = shmm::ForwardProject(ratio, Dx, Dy);
+      matrix<Type> ratiotmp = ratio;
+      if (solvetype == 1){
+	ratiotmp = shmm::ForwardProject(ratio, Dx, Dy);
+      } else {
+	ratiotmp = shmm::ForwardProjecti(ratio, Dx, Dy);
+      }
       matrix<Type> post = phi.row(tt-1).cwiseProduct(ratiotmp);
       post = post / (post.sum() + 1e-20);
       smoo.row(tt-1) = post;

@@ -29,16 +29,6 @@ calc.data.likelihood <- function(inp){
     fac <- time.fac()
     inp <- check.inp(inp)
 
-    # Datlik time vector
-    obstimeall <- sort(unique(unlist(inp$obstimeuse))) / fac
-    dt <- min(diff(obstimeall))
-    time <- seq(min(obstimeall), max(obstimeall), by=dt)
-    nt <- length(time)
-    inp$date <- as.POSIXct(time*24*60*60, origin='1970-01-01')
-
-    # Calculate iobs
-    inp$iobs <- match(inp$time, time, nomatch=0)
-
     if ('xy' %in% inp$datatypes & !'xy' %in% names(inp$datlik)){
         nobs <- length(inp$obs$X)
         inp$datlik$xy <- array(0, dim=c(nobs, inp$grid$nx, inp$grid$ny))
@@ -58,10 +48,11 @@ calc.data.likelihood <- function(inp){
 
     # Combined data likelihood for all data types
     # NOT DONE
+    nt <- length(inp$datliktime)
     inp$datlik$all <- matrix(1, nt, inp$grid$n)
     for (nm in inp$datatypes){
         obstime <- as.numeric(inp$obstimeuse[[nm]]) / fac
-        inds <- match(obstime, time)
+        inds <- match(obstime, inp$datliktime)
         c <- 1 # Counter
         for (i in inds){
             distr <- inp$datlik[[nm]][c, , ]

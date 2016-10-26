@@ -44,6 +44,7 @@ plotshmm.distr <- function(rep, name='smoo', sleep=0.05, add.map=TRUE){
             legend('topright', legend='Mean', lty=1, col='blue', bg='white')
         }
         if (add.map){
+            require(maps)
             maps::map(add=TRUE)
         }
         Sys.sleep(sleep)

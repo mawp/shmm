@@ -50,9 +50,11 @@ check.inp <- function(inp){
         #inp$grid$n <- inp$grid$nx * inp$grid$ny # Only true if no land
     }
 
+    fac <- time.fac()
     inp$scriptname <- 'shmm'
     # Set defaults that were not manually defined
     inp <- set.default(inp, 'dt', 1)
+    inp <- set.default(inp, 'datlik', list())
     inp <- set.default(inp, 'do.estimation', TRUE) # FALSE to save time
     if (!inp$do.estimation){
         inp$do.sd.report <- FALSE
@@ -60,7 +62,16 @@ check.inp <- function(inp){
     inp <- set.default(inp, 'do.sd.report', FALSE) # FALSE to save time
     #inp <- set.default(inp, 'dosmoo', 1)
     inp <- set.default(inp, 'maxm', 20)
+    inp <- set.default(inp, 'solvetype', 'uniformisation') # Other option: 'implicit'
 
+    # Solvetype
+    if (inp$solvetype == 'uniformisation'){
+        inp$solvetypein <- 1
+    }
+    if (inp$solvetype == 'implicit'){
+        inp$solvetypein <- 2
+    }
+    
     # Set default land if unspecified
     if (!'land' %in% names(inp)){
         warning('Land matrix not specified! use find.land() if relevant.')
@@ -73,16 +84,30 @@ check.inp <- function(inp){
 
     # Observation time vectors to be used
     inp$obstimeuse <- inp$obstime[inp$datatypes]
+
+    # Datlik time vector
+    inp$obstimeall <- sort(unique(unlist(inp$obstimeuse))) / fac
+    dt <- min(diff(inp$obstimeall))
+    inp$datliktime <- seq(min(inp$obstimeall), max(inp$obstimeall), by=dt)
+    inp$date <- as.POSIXct(inp$datliktime*24*60*60, origin='1970-01-01')
     
     # Calculate time vector
-    F <- max.rate(inp$gen$Dx, inp$gen$Dy)
-    maxF <- m2rate(inp$gen$m)
-    dt <- maxF / F
-    inp$dt <- 1/ceiling(1/dt) # Find a "proper" dt
-    fac <- time.fac()
-    inp$timerange <- range(unlist(inp$obstimeuse)) / fac
-    inp$time <- seq(inp$timerange[1], inp$timerange[2], by=inp$dt)
+    if (inp$solvetype == 'uniformisation'){
+        F <- max.rate(inp$gen$Dx, inp$gen$Dy)
+        maxF <- m2rate(inp$gen$m)
+        dt <- maxF / F
+        inp$dt <- 1/ceiling(1/dt) # Find a "proper" dt
+        timerange <- range(unlist(inp$obstimeuse)) / fac
+        inp$time <- seq(timerange[1], timerange[2], by=inp$dt)
+    }
+    if (inp$solvetype == 'implicit'){
+        inp$dt <- min(diff(inp$obstimeall))
+        inp$time <- inp$obstimeall
+    }
     inp$ns <- length(inp$time)
+
+    # Calculate iobs
+    inp$iobs <- match(inp$time, inp$datliktime, nomatch=0)
 
     return(inp)
 }
