@@ -53,6 +53,10 @@ check.inp <- function(inp){
     inp$scriptname <- 'shmm'
     # Set defaults that were not manually defined
     inp <- set.default(inp, 'dt', 1)
+    inp <- set.default(inp, 'do.estimation', TRUE) # FALSE to save time
+    if (!inp$do.estimation){
+        inp$do.sd.report <- FALSE
+    }
     inp <- set.default(inp, 'do.sd.report', FALSE) # FALSE to save time
     #inp <- set.default(inp, 'dosmoo', 1)
     inp <- set.default(inp, 'maxm', 20)
@@ -67,19 +71,18 @@ check.inp <- function(inp){
     # Add generator details
     inp <- add.gen(inp)
 
+    # Observation time vectors to be used
+    inp$obstimeuse <- inp$obstime[inp$datatypes]
+    
     # Calculate time vector
     F <- max.rate(inp$gen$Dx, inp$gen$Dy)
     maxF <- m2rate(inp$gen$m)
     dt <- maxF / F
     inp$dt <- 1/ceiling(1/dt) # Find a "proper" dt
     fac <- time.fac()
-    inp$timerange <- range(unlist(inp$obstime)) / fac
+    inp$timerange <- range(unlist(inp$obstimeuse)) / fac
     inp$time <- seq(inp$timerange[1], inp$timerange[2], by=inp$dt)
     inp$ns <- length(inp$time)
-
-    # Calculate iobs
-    inp$obstimeall <- sort(unique(unlist(inp$obstime))) / fac
-    inp$iobs <- match(inp$time, inp$obstimeall, nomatch=0)
 
     return(inp)
 }

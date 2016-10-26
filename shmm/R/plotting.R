@@ -24,11 +24,13 @@
 #' @param add.map Add map?
 #' @return Noting.
 #' @export
-plotshmm.distr <- function(rep, name='smoo', sleep=0.1, add.map=TRUE){
+plotshmm.distr <- function(rep, name='smoo', sleep=0.05, add.map=TRUE){
     distr <- rep$report[[name]]
     nt <- dim(distr)[1]
     for (i in 1:nt){
-        image(rep$inp$grid$xx, rep$inp$grid$yy, -distr[i, , ], xlab='X', ylab='Y', main=i)
+        main <- paste('i =', i, ' Date:', inp$date[i])
+        image(rep$inp$grid$xx, rep$inp$grid$yy, -distr[i, , ], xlab='X',
+              ylab='Y', main=main)
         if ('tracks' %in% names(rep)){
             if ('Xmean' %in% names(rep$tracks) & 'Ymean' %in% names(rep$tracks)){
                 lines(rep$tracks$Xmean[1:i], rep$tracks$Ymean[1:i], col='blue')

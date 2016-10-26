@@ -33,12 +33,17 @@ fit.shmm <- function(inp, dbg=0){
     cat('\nCreate objective function...')
     obj <- make.obj(inp) # Smoothing not performed here
 
-    cat('\nEstimating parameters...')
-    tic <- Sys.time()
-    rep$opt <- try(nlminb(obj$par, obj$fn, obj$gr))
-    rep$estimation.time <- difftime(Sys.time(), tic, unit='secs')
+    if (inp$do.estimation){
+        cat('\nEstimating parameters...')
+        tic <- Sys.time()
+        rep$opt <- try(nlminb(obj$par, obj$fn, obj$gr))
+        rep$estimation.time <- difftime(Sys.time(), tic, unit='secs')
+    } else {
+        cat('\nEvaluating for fixed parameters...')
+        nouse <- obj$fn() # Evaluate fn for initial parameters
+    }
     rep$dosmoo <- 1
-
+    
     #cat('\nSmoothing...')
     #obj$env$data$dosmoo <- 1 # Smooth now
     #nouse <- obj$fn() # Evaluate fn to do smoothing
