@@ -2,12 +2,7 @@
 // 21.12.2015
 #include <TMB.hpp>
 
-//#include "voodoo.hpp"
-
 /* Class to build generator and project state one step forward  */
-//struct {
-  // Data for atomic function (note: double types)
-  // Initialize at first evaluation with double types
 namespace shmm {
   // Input that is constant (do not depend on parameters)
   int m;
@@ -16,22 +11,23 @@ namespace shmm {
   Eigen::SparseMatrix<double> Sew;
   double dt;
   vector<double> lgam;
-  // New: Pass it all
   matrix<double> datlik;     // Data likelihood
   int solvetype;             // Type of solver to use
   int ns;                    // Number of time steps of solver
   vector<int> iobs;          // Indices to which observations correspond
 
-  /* We call the type 'Float' to emphasize that this is a tiny_ad type */
+  /* 'filter' class calculates the entire likelihood (not just one
+     step). We call the type 'Float' to emphasize that this is a
+     tiny_ad type */
   template<class Float>
   struct filter_t {
     /* Objects we only calculate once during initialization */
-    Eigen::SparseMatrix<Float> G;
+    //    Eigen::SparseMatrix<Float> G;
     Eigen::SparseMatrix<Float> FPdt; // For uniformization
-    Float F;                         // For uniformization
+    Float F;
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Float> > solver; // For implicit
 
-    /* Initialize the solver */
+    /* Initialize the generator */
     void initialize(Float Dx, Float Dy) {
       // Cast required 'double' objects to 'Float'
       Eigen::SparseMatrix<Float>   I = shmm::  I.cast<Float>();
@@ -40,28 +36,21 @@ namespace shmm {
       Float                       dt = shmm::dt;
       vector<Float>             lgam = shmm::lgam.cast<Float>();
       // Build generator
-      Float F = 2 * (Dx + Dy); // Absolute largest jump rate, max(abs(diag(G)))
-      G = Dx*Sew + Dy*Sns; // Make generator
-      
-      // Implicit solving (FIXME: only do for implicit)
-      Eigen::SparseMatrix<Float> A = I - G*dt;
-      solver.analyzePattern(A);
-      solver.factorize(A);
-
-      // (FIXME: only do for uniformization)
-      // -- Uniformisation begins --
-      Eigen::SparseMatrix<Float> P = G/F + I; // Sub-stochastic matrix
-      FPdt = F*P*Float(dt);
+      Eigen::SparseMatrix<Float> G = Dx*Sew + Dy*Sns;  // Make generator
+      if (solvetype == 1) { // Uniformisation
+	F = 2 * (Dx + Dy); // Absolute largest jump rate, max(abs(diag(G)))
+	Eigen::SparseMatrix<Float> P = G/F + I; // Sub-stochastic matrix
+	FPdt = F * P * Float(dt);
+      }
+      else if (solvetype == 2) { // Implicit solving
+	Eigen::SparseMatrix<Float> A = I - G*dt;
+	solver.analyzePattern(A);
+	solver.factorize(A);
+      }
+      else error("'solvetype' can by 1 or 2");
     }
 
-    // Implicit: project state one step forward
-    matrix<Float> forwardProjecti(matrix<Float> svec){
-      matrix<Float> predtmp = solver.solve(svec.transpose());
-      predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
-      return predtmp.transpose();
-    }
-
-    // Uniformization: project state one step forward
+    // 1. Uniformization: project state one step forward
     matrix<Float> forwardProject(matrix<Float> svec){
       matrix<Float> predtmp = svec; // Initialise
       for(int i=0; i<m; i++){
@@ -73,16 +62,19 @@ namespace shmm {
       return predtmp;
     }
 
+    // 2. Implicit: project state one step forward
+    matrix<Float> forwardProjecti(matrix<Float> svec){
+      matrix<Float> predtmp = solver.solve(svec.transpose());
+      predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
+      return predtmp.transpose();
+    }
         
     /* Run filter loop */
     Float eval(Float Dx, Float Dy) {
-      matrix<Float>   datlik = shmm::  datlik.cast<Float>();
-
-      
+      matrix<Float> datlik = shmm::datlik.cast<Float>();
       int nobs = datlik.rows();
       int n = datlik.cols();
-      // // Calculate components for uniformization
-      // Initialize solver or Fdt
+      // Initialize solver or FPdt
       initialize(Dx, Dy); // FIXME: Put in constructor
       // Initialise HMM grids
       matrix<Float> pred(ns, n);
@@ -92,35 +84,33 @@ namespace shmm {
       pred.row(0) = datlik.row(0) / datlik.row(0).sum();
       phi.row(0) = pred.row(0);
       // Filter loop
-      for(int t=1; t<ns; t++){
+      for(int t=1; t<ns; t++) {
       	// Time update using uniformization algorithm
       	matrix<Float> svec = phi.row(t-1);
       	matrix<Float> predtmp = svec;
-      	if (solvetype == 1){
+        if (solvetype == 1) {
       	  predtmp = forwardProject(svec);
-      	} else {
+        }
+        else if (solvetype == 2) {
       	  predtmp = forwardProjecti(svec);
-      	}
+        }
+        else error("'solvetype' can by 1 or 2");
       	pred.row(t) = predtmp; // Store prediction
-      	if (iobs(t) > 0){
+        if (iobs(t) > 0) {
       	  // Data update
       	  int ind = (iobs(t)-1);
       	  matrix<Float> post = pred.row(t).cwiseProduct(datlik.row(ind)); // Element-wise product
       	  psi(ind - 1) = post.sum(); 
       	  phi.row(t) = post / (psi(ind - 1) + 1e-20); // Add small value to avoid division by zero
       	} else {
-      // No data update
+	  // No data update
       	  phi.row(t) = pred.row(t);
       	}
       }
       // Negative log likelihood
       Float ans = -sum(log(psi));
-
-      return ans;      
-
-
+      return ans;
     }
-    
   };
 
   
@@ -144,8 +134,6 @@ namespace shmm {
     args << Dx, Dy, 0;
     return shmm::func(CppAD::vector<Type>(args))[0];
   }
-  
-  
 }
 
 
@@ -181,7 +169,7 @@ Type objective_function<Type>::operator() ()
     shmm::Sns = Sns;
     shmm::Sew = Sew;
     shmm::dt = dt;
-      // Dirty trick didn't work for DATA_VECTOR:
+    // Dirty trick didn't work for DATA_VECTOR:
     // DATA_VECTOR(lgam);       // Factorial
     shmm::lgam = asVector<double>(getListElement(objective_function::data,"lgam",&isNumeric));
   }
@@ -190,19 +178,9 @@ Type objective_function<Type>::operator() ()
   Type Dy = exp(logDy);
 
   Type ans = shmm::hmm_nll(Dx, Dy);
-
-
-  // typedef atomic::tiny_ad::variable<1,2> Float;
-  // shmm::filter_t<Float> f;
-  // Float q1, q2;
-  // f.eval(q1, q2);
-  
-  
   
   return ans;
 
-  //return 0;
-  
   // Smoothing
   // TODO: only run smoothing once after estimation is completed
 
