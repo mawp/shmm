@@ -63,3 +63,40 @@ calc.data.likelihood <- function(inp){
     
     return(inp)
 }
+
+
+#' @name get.datlik.sst
+#' @title Get SST data likelihood
+#' @details Get data likelihood based on SST (SeaSurfaceTemperatures)
+#' @param grid Array of SST measurements. dim(grid)=c(nLon, nLat, nTime).
+#' @param obs Vector of temperature values observed from tag. length(obs)=nTime.
+#' @param sds Vector of standard deviations to be used for calculating datlik.sst. length(sds)=nTime.
+#' @param times Vector of times. length(times)=nTime.
+#' @return List containing datlik_sst: Array of daily likelihoods given the input data; times: vector of corresponding times
+get.datlik.sst <- function(grid, obs, sds, times){
+	sst <- aperm(grid, c(3,1,2)) #A bit back and forth - probably a simpler way...
+	datlik_sst <- dnorm(sst, obs, sds)
+	datlik_sst <- aperm(datlik_sst, c(2,3,1))
+	return(list(datlik_sst=datlik_sst, times=times))
+}
+
+#' @name get.datlik.lon
+#' @title Get data likelihood based on lon estimates.
+#' @details Get data likelihood based on lon estimates.
+#' @param grid_lon Vector of longitudes to build grid from.
+#' @param grid_lat Vector of lattitudes to build grid from.
+#' @param f_lon Vector of longitudes to estimate likelihood for.
+#' @param sds Vector of standard deviations to be used for calculating likelihood.
+#' @param times Vector of times. length(times)=nTime.
+#' @return List containing datlik_lon: Array of daily likelihoods given the input data; times: vector of corresponding times
+get.datlik.lon <- function(grid_lon, grid_lat, f_lon, sd, times){
+	df <- data.frame(id=seq(1:length(f_lon)), f_lon=f_lon, sd=sd)
+	datlik_lon <- daply(df,1, function(k){
+		f_lon_i <- as.numeric(k['f_lon'])
+		sd_i <- as.numeric(k['sd'])
+		outer(grid_lon, grid_lat, FUN=function(grid_lon,grid_lat) {dnorm(grid_lon, f_lon_i, sd_i)})
+	})
+	datlik_lon <- aperm(datlik_lon, c(2,3,1))
+	return(list(datlik_lon = datlik_lon, times=times))
+}
+
