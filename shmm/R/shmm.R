@@ -19,20 +19,21 @@
 #' @title Fit a continuous-time surplus production model to data.
 #' @details Fit a continuous-time surplus production model to data.
 #' @param inp List of input variables as output by check.inp.
+#' @param dosmoo Do smoothing?
 #' @param dbg Debugging option. Will print out runtime information useful for debugging if set to 1. Will print even more if set to 2.
 #' @return List containing results.
 #' @export
 #' @examples
 #' rep <- fit.shmm(inp)
 #' @import TMB
-fit.shmm <- function(inp, dbg=0){
+fit.shmm <- function(inp, dosmoo=1, dbg=0){
     # Check input list
     inp <- check.inp(inp)
     rep <- list(inp=inp)
     
     tic <- Sys.time()
     cat('\nCreate objective function...')
-    obj <- make.obj(inp) # Smoothing not performed here
+    obj <- make.obj(inp, dosmoo=dosmoo) # Smoothing not performed here
 
     if (inp$do.estimation){
         cat('\nEstimating parameters...')
@@ -41,16 +42,7 @@ fit.shmm <- function(inp, dbg=0){
         cat('\nEvaluating for fixed parameters...')
         nouse <- obj$fn() # Evaluate fn for initial parameters
     }
-    rep$dosmoo <- 1
-    
-    #cat('\nSmoothing...')
-    #obj$env$data$dosmoo <- 1 # Smooth now
-    #nouse <- obj$fn() # Evaluate fn to do smoothing
-    #inp2 <- inp
-    #obj2 <- make.obj(inp2) # Smoothing not performed here
-    #obj2$env$data$dosmoo <- 1 # Smooth now
-    #nouse <- obj2$fn(obj$env$last.par.best) # Evaluate fn to do smoothing
-    #report <- obj2$report()
+    rep$dosmoo <- dosmoo
     
     cat('\nSave report...')
     rep$report <- obj$report()
@@ -61,6 +53,29 @@ fit.shmm <- function(inp, dbg=0){
             if (length(dim(vecdistr)) == 2){
                 rep$report[[nmpl]] <- format.distr(vecdistr, rep)
                 #rep$report[[nm]] <- NULL
+            }
+        }
+    }
+
+    #cat('\nSmoothing...')
+    obj2 <- obj
+    obj2$env$data$dosmoo <- 1 # Smooth now
+    #nouse <- obj2$fn() # Evaluate fn to do smoothing
+    #inp2 <- inp
+    #obj2 <- make.obj(inp2) # Smoothing not performed here
+    #obj2$env$data$dosmoo <- 1 # Smooth now
+    nouse <- obj2$fn(obj2$env$last.par.best) # Evaluate fn to do smoothing
+
+    
+    cat('\nSave report2...')
+    rep$report2 <- obj2$report()
+    for (nm in names(rep$report2)){
+        if (nm != 'psi'){
+            nmpl <- sub('out', '', nm)
+            vecdistr <- rep$report2[[nm]]
+            if (length(dim(vecdistr)) == 2){
+                rep$report2[[nmpl]] <- format.distr(vecdistr, rep)
+                #rep$report2[[nm]] <- NULL
             }
         }
     }
@@ -88,15 +103,17 @@ fit.shmm <- function(inp, dbg=0){
 #' @title Create TMB obj using TMB::MakeADFun and squelch screen printing.
 #' @param inp List of input variables as output by check.inp.
 #' @param phase Estimation phase, integer.
+#' @param dosmoo Do smoothing?
 #' @return List to be used as data input to TMB.
 #' @export
 #' @import TMB
-make.obj <- function(inp, phase=1){
-    datlist <- make.datlist(inp)
-    parlist <- make.parlist(inp)
+make.obj <- function(inp, phase=1, dosmoo=1){
+    datlist <- make.datlist(inp, dosmoo=dosmoo)
+    parlist <- make.parlist(inp, dosmoo=dosmoo)
     # This one requires memory if not using atomic
     obj <- TMB::MakeADFun(data=datlist,
                           parameters=parlist,
+                          map=list(dosmoo=factor(NA)),
                           random=NULL,
                           DLL=inp$scriptname,
                           checkParameterOrder=FALSE)
@@ -114,11 +131,11 @@ make.obj <- function(inp, phase=1){
 #' @name make.datlist
 #' @title Create data list used as input to TMB::MakeADFun.
 #' @param inp List of input variables as output by check.inp.
+#' @param dosmoo Do smoothing?
 #' @return List to be used as data input to TMB::MakeADFun.
 #' @export
-make.datlist <- function(inp){
+make.datlist <- function(inp, dosmoo=1){
     datlist <- list(datlik=inp$datlik$all,
-                    dosmoo=1,
                     solvetype=inp$solvetypein,
                     ns=inp$ns,
                     iobs=inp$iobs,
@@ -135,11 +152,13 @@ make.datlist <- function(inp){
 #' @name make.parlist
 #' @title Create parameter list used as input to TMB::MakeADFun.
 #' @param inp List of input variables as output by check.inp.
+#' @param dosmoo Do smoothing?
 #' @return List to be used as parameter input to TMB::MakeADFun.
 #' @export
-make.parlist <- function(inp){
+make.parlist <- function(inp, dosmoo=1){
     parlist <- list(logDx=log(inp$gen$Dx),
-                    logDy=log(inp$gen$Dy))
+                    logDy=log(inp$gen$Dy),
+                    dosmoo=dosmoo)
     return(parlist)
 }
 

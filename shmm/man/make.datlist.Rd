@@ -4,10 +4,12 @@
 \alias{make.datlist}
 \title{Create data list used as input to TMB::MakeADFun.}
 \usage{
-make.datlist(inp)
+make.datlist(inp, dosmoo = 1)
 }
 \arguments{
 \item{inp}{List of input variables as output by check.inp.}
+
+\item{dosmoo}{Do smoothing?}
 }
 \value{
 List to be used as data input to TMB::MakeADFun.

@@ -150,12 +150,12 @@ template<class Type>
 Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(datlik);     // Data likelihood
-  DATA_INTEGER(dosmoo);    // If 1 smoothing is done
   DATA_INTEGER(solvetype); // Type of solver to use
   DATA_INTEGER(ns);        // Number of time steps of solver
   DATA_VECTOR(iobs);       // Indices to which observations correspond
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
   PARAMETER(logDy);        // log diffusion in north-south (y) direction
+  PARAMETER(dosmoo);    // If 1 smoothing is done
 
   // Transfer all constant data to namespace 'shmm'
   if(isDouble<Type>::value){
@@ -221,7 +221,7 @@ Type objective_function<Type>::operator() ()
   // Smoothing
   // TODO: only run smoothing once after estimation is completed
   matrix<Type> smoo(ns, n);
-  if (dosmoo == 1){
+  if (dosmoo == 1.0){
     // Smoothing loop
     smoo.row(ns-1) = phi.row(ns-1);
     for(int t=1; t < ns; t++){
@@ -249,6 +249,27 @@ Type objective_function<Type>::operator() ()
       smoo.row(tt-1) = post;
     }
   }
+
+  /*
+  // Viterbi
+  // Forward sweep
+  vector<Type> ksi1 = phi.row(0);
+  vector<Type> ksi2 = ksi1;
+  matrix<Type> zerovec(1, n);
+  for(int i=0; i < n; i++){
+    zerovec(0, i) = 0.0;
+  }
+  Type out = max(ksi1); 
+  REPORT(out);
+  for(int t=0; t<ns; t++){
+    for(int i=0; i < n; i++){
+      matrix<Type> vec = zerovec;
+      vec(0, i) = phi(t, i);
+      matrix<Type> newvec = shmm::ForwardProject(vec, Dx, Dy);
+    }
+  }
+  // Backard sweep
+  */
 
   // Store a subset of distribution for output
   matrix<Type> smooout(nobs, n);
