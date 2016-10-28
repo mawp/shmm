@@ -66,8 +66,8 @@ parlist <- list(logDx=log(inp$gen$Dx),
 
 obj <- TMB::MakeADFun(data=datlist,
                       parameters=parlist,
-                      map=list(dosmoo=factor(NA)),
                       random=NULL,
+                      map=list(dosmoo=factor(NA)),
                       DLL=inp$scriptname,
                       checkParameterOrder=FALSE)
 # Make TMB quiet
