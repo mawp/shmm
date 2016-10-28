@@ -64,11 +64,13 @@ parlist <- list(logDx=log(inp$gen$Dx),
                 logDy=log(inp$gen$Dy),
                 dosmoo=1)
 
+compile('tinyad.cpp')
+dyn.load(dynlib("tinyad"))
 obj <- TMB::MakeADFun(data=datlist,
                       parameters=parlist,
                       random=NULL,
                       map=list(dosmoo=factor(NA)),
-                      DLL=inp$scriptname,
+                      DLL='tinyad',
                       checkParameterOrder=FALSE)
 # Make TMB quiet
 TMB:::config(trace.optimize=0, DLL=inp$scriptname)
