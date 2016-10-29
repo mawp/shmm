@@ -27,6 +27,12 @@ namespace shmm {
     Float F;
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Float> > solver; // For implicit
 
+    // HMM grids (used by both 'eval' and 'smoothing')
+    matrix<Float> pred;
+    matrix<Float> phi;
+    vector<Float> psi;
+    matrix<Float> smoo; // output from smoothing
+
     /* Initialize the generator */
     void initialize(Float Dx, Float Dy) {
       // Cast required 'double' objects to 'Float'
@@ -68,18 +74,18 @@ namespace shmm {
       predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
       return predtmp.transpose();
     }
-        
+
     /* Run filter loop */
-    Float eval(Float Dx, Float Dy) {
+    Float eval(Float Dx, Float Dy, bool do_smoothing = false) {
       matrix<Float> datlik = shmm::datlik.cast<Float>();
       int nobs = datlik.rows();
       int n = datlik.cols();
       // Initialize solver or FPdt
-      initialize(Dx, Dy); // FIXME: Put in constructor
+      initialize(Dx, Dy); // FIXME: Put in constructor (?)
       // Initialise HMM grids
-      matrix<Float> pred(ns, n);
-      matrix<Float> phi(ns, n);
-      vector<Float> psi(nobs - 1);
+      pred.resize(ns, n);
+      phi.resize(ns, n);
+      psi.resize(nobs - 1);
       // First state is at time of first observation
       pred.row(0) = datlik.row(0) / datlik.row(0).sum();
       phi.row(0) = pred.row(0);
@@ -109,8 +115,40 @@ namespace shmm {
       }
       // Negative log likelihood
       Float ans = -sum(log(psi));
+
+      if(do_smoothing) {
+	smoo.resize(ns, n);
+	// Smoothing loop
+	smoo.row(ns-1) = phi.row(ns-1);
+	for(int t=1; t < ns; t++) {
+	  int tt = ns - t;
+	  // Time update using uniformization algorithm
+	  matrix<Float> predrow = pred.row(tt);
+	  for (int i=0; i < n; i++) {
+	    predrow(0, i) += 1e-10;
+	  }
+	  matrix<Float> ratio = smoo.row(tt).cwiseQuotient(predrow);
+	  //matrix<double> asd(1, n);
+	  //for (int i=0; i < n; i++){
+	  //asd(0, i) = std::isnan(asDouble(ratio(0, i)));
+	  //cout 
+	  //}
+	  //matrix<double> asd = std::isnan(asDouble(ratio));
+	  matrix<Float> ratiotmp = ratio;
+	  if (solvetype == 1){
+	    ratiotmp = forwardProject(ratio);
+	  } else if (solvetype == 2) {
+	    ratiotmp = forwardProjecti(ratio);
+	  } else error("'solvetype' can by 1 or 2");
+	  matrix<Float> post = phi.row(tt-1).cwiseProduct(ratiotmp);
+	  post = post / (post.sum() + 1e-20);
+	  smoo.row(tt-1) = post;
+	}	
+      }
+      
       return ans;
     }
+    
   };
 
   
@@ -142,7 +180,7 @@ Type objective_function<Type>::operator() ()
 {
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
   PARAMETER(logDy);        // log diffusion in north-south (y) direction
-  // PARAMETER(dosmoo);    // If 1 smoothing is done
+  // DATA_INTEGER(dosmoo);    // If 1 smoothing is done
 
   // Transfer all constant data to namespace 'shmm'
   if(isDouble<Type>::value){
@@ -178,44 +216,37 @@ Type objective_function<Type>::operator() ()
   Type Dy = exp(logDy);
 
   Type ans = shmm::hmm_nll(Dx, Dy);
+
+  /* With this construct 'dosmoo' flag becomes redundant. The branch
+     is only entered by obj$report(). */
+  if(isDouble<Type>::value) {
+    shmm::filter_t<double> filter;
+    filter.eval(asDouble(Dx), asDouble(Dy), true /* do_smoothing */ );
+    // Store a subset of distribution for output
+    int nobs = shmm::datlik.rows();
+    int n = shmm::datlik.cols();
+    int ns = shmm::ns;
+    vector<int> iobs = shmm::iobs;
+    matrix<double> smooout(nobs, n);
+    matrix<double> phiout(nobs, n);
+    matrix<double> predout(nobs, n);
+    for(int t=0; t<ns; t++){
+      if (iobs(t) > 0){
+	int ind = (iobs(t)-1);
+	smooout.row(ind) = filter.smoo.row(t);
+	phiout.row(ind) = filter.phi.row(t);
+	predout.row(ind) = filter.pred.row(t);
+      }
+    }
+    vector<double> psi = filter.psi;
+    // Reports
+    REPORT(predout);
+    REPORT(phiout);
+    REPORT(psi);
+    REPORT(smooout); 
+  }
   
   return ans;
-
-  // Smoothing
-  // TODO: only run smoothing once after estimation is completed
-
-
-  /* KASPER: Wait with smooth
-  matrix<Type> smoo(ns, n);
-  if (dosmoo == 1.0){
-    // Smoothing loop
-    smoo.row(ns-1) = phi.row(ns-1);
-    for(int t=1; t < ns; t++){
-      int tt = ns - t;
-      // Time update using uniformization algorithm
-      matrix<Type> predrow = pred.row(tt);
-      for (int i=0; i < n; i++){
-	predrow(0, i) += 1e-10;
-      }
-      matrix<Type> ratio = smoo.row(tt).cwiseQuotient(predrow);
-      //matrix<double> asd(1, n);
-      //for (int i=0; i < n; i++){
-      //asd(0, i) = std::isnan(asDouble(ratio(0, i)));
-	//cout 
-      //}
-      //matrix<double> asd = std::isnan(asDouble(ratio));
-      matrix<Type> ratiotmp = ratio;
-      if (solvetype == 1){
-	ratiotmp = shmm::ForwardProject(ratio, Dx, Dy);
-      } else {
-	ratiotmp = shmm::ForwardProjecti(ratio, Dx, Dy);
-      }
-      matrix<Type> post = phi.row(tt-1).cwiseProduct(ratiotmp);
-      post = post / (post.sum() + 1e-20);
-      smoo.row(tt-1) = post;
-    }
-  }
-  */
 
   /*
   // Viterbi
@@ -236,29 +267,6 @@ Type objective_function<Type>::operator() ()
     }
   }
   // Backard sweep
-  */
-
-  /* KASPER: Wait with REPORT stuff
-  
-  // Store a subset of distribution for output
-  matrix<Type> smooout(nobs, n);
-  matrix<Type> phiout(nobs, n);
-  matrix<Type> predout(nobs, n);
-  for(int t=0; t<ns; t++){
-    if (iobs(t) > 0){
-      int ind = (iobs(t)-1);
-      smooout.row(ind) = smoo.row(t);
-      phiout.row(ind) = phi.row(t);
-      predout.row(ind) = pred.row(t);
-    }
-  }
-
-  // Reports
-  REPORT(predout);
-  REPORT(phiout);
-  REPORT(psi);
-  REPORT(smooout);
-
   */
 
 
