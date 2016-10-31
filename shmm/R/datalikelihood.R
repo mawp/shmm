@@ -87,24 +87,21 @@ get.datlik.sst <- function(grid, obs, sds, times){
 #' @param solarDep Numeric value with the angle of the sun below the horizon in degrees. 6 seems to be good based on know values at start.
 #' @return List containing datlik_lon: Array of daily likelihoods given the input data; times: vector of corresponding times
 get.datlik.sun <- function(grid_lon, grid_lat, dat_sun, solarDep=6){
-	
-	library(maptools) #NOT SURE WHERE TO PUT THIS!!!!!
-	
 	grid <- expand.grid(x=grid_lon, y=grid_lat)
-	coordinates(grid) <- c("x","y")
-	SP <- SpatialPoints(coordinates(grid),proj4string=CRS("+proj=longlat +datum=WGS84"))
+	sp::coordinates(grid) <- c("x","y")
+	SP <- sp::SpatialPoints(sp::coordinates(grid),proj4string=sp::CRS("+proj=longlat +datum=WGS84"))
 
-	datlik_sun <- daply(dat_sun, 1, .progress="text",  function(k) {
+	datlik_sun <- plyr::daply(dat_sun, 1, .progress="text",  function(k) {
 		date <- k$date
 		if(k$sr_rm == 0){
-			dawn <- crepuscule(SP, date, solarDep=solarDep, direction="dawn")
+			dawn <- maptools::crepuscule(SP, date, solarDep=solarDep, direction="dawn")
 			dawn_mat <- matrix(dawn, ncol=length(grid_lat), nrow=length(grid_lon))
 			dawn_lik <- dnorm(dawn_mat, k$sr, sd=2e-2) #Maybe add a component from depth at sunrise
 		} else {
 			dawn_lik <- matrix(1, ncol=length(grid_lat), nrow=length(grid_lon))
 		}
 		if(k$ss_rm == 0){
-			dusk <- crepuscule(SP, date, solarDep=solarDep, direction="dusk")
+			dusk <- maptools::crepuscule(SP, date, solarDep=solarDep, direction="dusk")
 			dusk_mat <- matrix(dusk, ncol=length(grid_lat), nrow=length(grid_lon))
 			dusk_lik <- dnorm(dusk_mat, k$ss, sd=2e-2) #Maybe add a component from depth at sunset
 		} else {
@@ -116,8 +113,6 @@ get.datlik.sun <- function(grid_lon, grid_lat, dat_sun, solarDep=6){
 		} else {
 			daylength_lik <- matrix(1, ncol=length(grid_lat), nrow=length(grid_lon))
 		}
-		# image(dusk_lik*dawn_lik*daylength_lik)
-		# image(dusk_lik)
 		return(dusk_lik * dawn_lik * daylength_lik)
 	})
 	

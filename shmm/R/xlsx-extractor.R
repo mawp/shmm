@@ -15,10 +15,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-library(openxlsx)
-library(plyr)
-library(mgcv)
-
 #' @name get.dat.sun
 #' @title Extract sun info from psat xlsx-file.
 #' @details Extract sun info from psat xlsx-file.
@@ -26,7 +22,7 @@ library(mgcv)
 #' @param filter_thres Threshold to use in the filtering process. Smaller values give more restrictive filtering. 0.2 is a good starting point.
 #' @return Dataframe (dat_s) with sun info from xlsx-file. Time of sunrise and -set along with depth at time of sunrise/set. Columns sr_rm and ss_rm contain result from filter (0=keep, 1=remove).
 get.dat.sun <- function(fn, filter_thres=0.2, showPlot=TRUE){
-	dat_s <- read.xlsx(fn, sheet="Sunrise and Sunset Times", startRow=2, cols=1:5)
+	dat_s <- openxlsx::read.xlsx(fn, sheet="Sunrise and Sunset Times", startRow=2, cols=1:5)
 	colnames(dat_s) <- c('date','sr','depth_sr', 'ss','depth_ss')
 	dat_s$date <- as.POSIXct((dat_s$date*(24*60*60)), tz="GMT", origin="1899-12-30")
 	dat_s$depth_sr <- as.numeric(dat_s$depth_sr)
@@ -75,10 +71,10 @@ filter.sun <- function(dat_s, direction, filter_thres){
 	wgt[is.na(wgt)] <- exp(-5)
 	while(abs(Emax) > filter_thres){
 		if(length(rems) == 0){
-			m <- gam(sr ~ s(as.numeric(date)), data=dat_s, na.action=na.omit, weights=wgt, family="scat")
+			m <- mgcv::gam(sr ~ s(as.numeric(date)), data=dat_s, na.action=na.omit, weights=wgt, family="scat")
 		} else {
 			# wgt[rems,1] <- NA
-			suppressWarnings(m <- gam(sr ~ s(as.numeric(date)), data=dat_s[-rems,], na.action=na.omit, weights=wgt[-rems], family="scat"))
+			suppressWarnings(m <- mgcv::gam(sr ~ s(as.numeric(date)), data=dat_s[-rems,], na.action=na.omit, weights=wgt[-rems], family="scat"))
 		}
 		E <- resid(m, type="response")
 		p <- predict(m)
@@ -101,12 +97,12 @@ filter.sun <- function(dat_s, direction, filter_thres){
 #' @return Dataframe (dat_dt) with depth and temperature info from PSAT xlsx-file.
 get.dat.dt <- function(fn){
 	#get temperature data from psat xlsx-file
-	dat_t <- read.xlsx(fn, sheet="Temp Data", startRow=2, cols=1:3)
+	dat_t <- openxlsx::read.xlsx(fn, sheet="Temp Data", startRow=2, cols=1:3)
 	colnames(dat_t) <- c('datetime','temp_raw','temp')
 	dat_t$datetime <- as.POSIXct((dat_t$datetime*(24*60*60)), tz="GMT", origin="1899-12-30")
 	
 	#get depth data from psat xlsx-file
-	dat_d <- read.xlsx(fn, sheet="Press Data", startRow=2, cols=1:4)
+	dat_d <- openxlsx::read.xlsx(fn, sheet="Press Data", startRow=2, cols=1:4)
 	colnames(dat_d) <- c('datetime','press','gain','depth')
 	dat_d$datetime <- as.POSIXct((dat_d$datetime*(24*60*60)), tz="GMT", origin="1899-12-30")
 	
@@ -124,7 +120,7 @@ get.dat.dt <- function(fn){
 get.dat.sst <- function(dat_dt){
 	dat_dt$day <- as.character(strptime(dat_dt$datetime, format="%Y-%m-%d", tz="GMT"))
 	days <- unique(dat_dt$day)
-	dat_sst <- aaply(days, 1, .fun=function(k) {
+	dat_sst <- plyr::aaply(days, 1, .fun=function(k) {
 		dat_k <- dat_dt[which(dat_dt$day == k),]
 		if(sum(!is.na(dat_k$depth[which(!is.na(dat_k$temp))])) > 0) {
 			min_depth <- max(dat_k$depth[which(!is.na(dat_k$temp))], na.rm=TRUE)
