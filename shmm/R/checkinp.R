@@ -60,7 +60,8 @@ check.inp <- function(inp){
         inp$do.sd.report <- FALSE
     }
     inp <- set.default(inp, 'do.sd.report', FALSE) # FALSE to save time
-    #inp <- set.default(inp, 'dosmoo', 1)
+    inp <- set.default(inp, 'do.smoo', 1)
+    inp <- set.default(inp, 'do.viterbi', 1)
     inp <- set.default(inp, 'maxm', 20)
     inp <- set.default(inp, 'solvetype', 'uniformisation') # Other option: 'implicit'
 
