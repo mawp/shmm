@@ -15,8 +15,8 @@ inp$osd <- 1 # Observation error sd
 #inp$dt <- 1
 inp$maxm <- 25
 
-inp$grid$dx <- 1.2
-inp$grid$dy <- 1.2
+inp$grid$dx <- 1.2 / 3
+inp$grid$dy <- 1.2 / 3
 
 # Simulate
 inp <- sim.shmm(inp, nobs=10)
@@ -45,8 +45,11 @@ inp$land <- dummy == 1
 cat('nx: ', inp$grid$nx, ' ny: ', inp$grid$ny, ' no states: ', inp$grid$nx*inp$grid$ny, '\n')
 
 # Calculate data likelihood
-inp$solvetype <- 'uniformisation'
+                                        # inp$solvetype <- 'uniformisation'
+inp$solvetype <- 'implicit'
 inp <- calc.data.likelihood(inp)
+print(inp$dt)
+print(length(inp$time))
 
 # Setup object
 datlist <- list(datlik=inp$datlik$all,
