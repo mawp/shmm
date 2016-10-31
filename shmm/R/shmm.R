@@ -115,6 +115,7 @@ make.datlist <- function(inp){
                     solvetype=inp$solvetypein,
                     ns=inp$ns,
                     iobs=inp$iobs,
+                    isave=inp$isave,
                     dosmoo=inp$do.smoo,
                     doviterbi=inp$do.viterbi,
                     I=inp$gen$I,

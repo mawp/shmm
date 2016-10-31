@@ -153,6 +153,7 @@ Type objective_function<Type>::operator() ()
   DATA_INTEGER(solvetype); // Type of solver to use
   DATA_INTEGER(ns);        // Number of time steps of solver
   DATA_VECTOR(iobs);       // Indices to which observations correspond
+  DATA_VECTOR(isave);      // Indices to which observations correspond
   DATA_INTEGER(dosmoo);    // If 1 smoothing is done
   DATA_INTEGER(doviterbi); // If 1 Viterbi track is calculated
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
@@ -336,8 +337,8 @@ Type objective_function<Type>::operator() ()
   //matrix<Type> xiout(nobs, n);
   matrix<Type> xiout = xi;
   for(int t=0; t < ns; t++){
-    if (iobs(t) > 0){
-      int ind = CppAD::Integer(iobs(t)-1);
+    if (isave(t) > 0){
+      int ind = CppAD::Integer(isave(t)-1);
       smooout.row(ind) = smoo.row(t);
       phiout.row(ind) = phi.row(t);
       predout.row(ind) = pred.row(t);

@@ -47,8 +47,8 @@ inp$land <- dummy == 1
 cat('nx: ', inp$grid$nx, ' ny: ', inp$grid$ny, ' no states: ', inp$grid$nx*inp$grid$ny, '\n')
 
 # Calculate data likelihood
-                                        # inp$solvetype <- 'uniformisation'
-inp$solvetype <- 'implicit'
+inp$solvetype <- 'uniformisation'
+#inp$solvetype <- 'implicit'
 inp <- calc.data.likelihood(inp)
 print(inp$dt)
 print(length(inp$time))
@@ -87,5 +87,7 @@ obj$fn(obj$par)
 obj$gr(obj$par)
 
 
+obj <- make.obj(inp) # Smoothing not performed here
 
+res <- fit.shmm(inp)
 
