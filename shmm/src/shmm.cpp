@@ -62,7 +62,7 @@ namespace shmm {
     predtmp = solver.solve(svec.transpose());
     predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
 
-    return predtmp;
+    return predtmp.transpose();
   }
   //};
 

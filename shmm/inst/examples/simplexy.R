@@ -7,8 +7,8 @@ inp <- list()
 inp$datatypes <- 'xy'
 inp$do.estimation <- TRUE
 inp$do.sd.report <- FALSE
-inp$dosmoo <- 0
-inp$doviterbi <- 0
+inp$do.smoo <- 1
+inp$do.viterbi <- 0
 
 # Parameters
 inp$ini$logsdx <- log(5)
@@ -47,6 +47,7 @@ inp$land <- dummy == 1
 
 # Calculate data likelihood
 inp$solvetype <- 'uniformisation'
+#inp$solvetype <- 'implicit'
 inp <- calc.data.likelihood(inp)
 
 cat('nx: ', inp$grid$nx, ' ny: ', inp$grid$ny, ' no states: ', inp$grid$nx*inp$grid$ny, ' ns: ', inp$ns, '\n')
@@ -55,4 +56,8 @@ cat('nx: ', inp$grid$nx, ' ny: ', inp$grid$ny, ' no states: ', inp$grid$nx*inp$g
 # Fit shmm
 res <- fit.shmm(inp)
 
-plotshmm.distr(res, name='phi', sleep=0.05, add.map=FALSE)
+if (inp$do.smoo == 1){
+    plotshmm.distr(res, name='smoo', sleep=0.05, add.map=FALSE)
+} else {
+    plotshmm.distr(res, name='phi', sleep=0.05, add.map=FALSE)
+}

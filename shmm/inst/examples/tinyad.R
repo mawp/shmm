@@ -7,6 +7,8 @@ inp <- list()
 inp$datatypes <- 'xy'
 inp$do.estimation <- TRUE
 inp$do.sd.report <- FALSE
+inp$do.smoo <- 0
+inp$do.viterbi <- 0
 
 # Parameters used for simulation
 inp$ini$logsdx <- log(5)

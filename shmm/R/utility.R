@@ -214,7 +214,7 @@ format.distr <- function(vecdistr, rep){
 #' @return A list containing 
 #' @export
 get.mean.track <- function(rep){
-    if (rep$dosmoo == 1){
+    if (rep$do.smoo == 1){
         distr <- rep$report$smoo
     } else {
         distr <- rep$report$phi
