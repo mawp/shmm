@@ -75,6 +75,7 @@ calc.data.likelihood <- function(inp){
 #' @return List containing datlik_sst: Array of daily likelihoods given the input data; times: vector of corresponding times
 get.datlik.sst <- function(grid, obs, sds, times){
 	datlik_sst <- dnorm(grid, obs, sds)
+	dimnames(datlik_sst) <- NULL
 	return(list(datlik_sst=datlik_sst, times=times))
 }
 
@@ -115,10 +116,10 @@ get.datlik.sun <- function(grid_lon, grid_lat, dat_sun, solarDep=6){
 		}
 		return(dusk_lik * dawn_lik * daylength_lik)
 	})
-	
+	dimnames(datlik_sun) <- NULL
 	rms <- which(dat_sun$sr_rm == 1 & dat_sun$ss_rm == 1)
-	
 	datlik_sun <- datlik_sun[-rms,,]
+	datlik_sun[is.na(datlik_sun)] <- 0 #TMB does not like NAs
 	times <- dat_sun$date[-rms]
 	return(list(datlik_sun = datlik_sun, times=times))
 }
