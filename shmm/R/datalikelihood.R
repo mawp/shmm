@@ -143,3 +143,27 @@ get.datlik.lon <- function(grid_lon, grid_lat, f_lon, sd, times){
 	return(list(datlik_lon = datlik_lon, times=times))
 }
 
+#' @name get.datlik.rel.recap
+#' @title Get data likelihood for release and recapture.
+#' @details Get data likelihood for release and recapture.
+#' @param grid_lon Vector of longitudes to build grid from.
+#' @param grid_lat Vector of lattitudes to build grid from.
+#' @param sd Standard deviations to be used for calculating likelihood - defaults to 1.
+#' @param dat_rr Object obtained from get.rel.recap().
+#' @return List containing dates and datliks for release and recapture.
+get.datlik.rel.recap <- function(grid_lon, grid_lat, sd=1, dat_rr){
+	list_rr <- list()
+	list_rr$datlik_rel <- array(0, dim=c(1,length(grid_lon), length(grid_lat)))
+	list_rr$datlik_rel[1, , ] <- outer(dnorm(grid_lon, dat_rr$start_lon, sd=sd),
+								dnorm(grid_lat, dat_rr$start_lat, sd=sd))
+	list_rr$rel_date <- as.POSIXct(dat_rr$start_date, tz="UTC")
+
+	list_rr$datlik_rec <- array(0, dim=c(1,length(grid_lon), length(grid_lat)))
+	list_rr$datlik_rec[1, , ] <- outer(dnorm(grid_lon, dat_rr$end_lon, sd=sd),
+								dnorm(grid_lat, dat_rr$end_lat, sd=sd))
+	list_rr$rec_date <- as.POSIXct(dat_rr$end_date, tz="UTC")
+	return(list_rr)
+}
+
+
+
