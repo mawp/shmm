@@ -4,12 +4,14 @@
 \alias{make.obj}
 \title{Create TMB obj using TMB::MakeADFun and squelch screen printing.}
 \usage{
-make.obj(inp, phase = 1)
+make.obj(inp, phase = 1, dosmoo = 1)
 }
 \arguments{
 \item{inp}{List of input variables as output by check.inp.}
 
 \item{phase}{Estimation phase, integer.}
+
+\item{dosmoo}{Do smoothing?}
 }
 \value{
 List to be used as data input to TMB.

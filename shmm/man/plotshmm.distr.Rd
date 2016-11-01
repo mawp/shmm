@@ -4,7 +4,7 @@
 \alias{plotshmm.distr}
 \title{Plots the distribution indicated by name}
 \usage{
-plotshmm.distr(rep, name = "smoo", sleep = 0.1)
+plotshmm.distr(rep, name = "smoo", sleep = 0.05, add.map = TRUE)
 }
 \arguments{
 \item{rep}{Result of running fit.shmm.}
@@ -12,6 +12,8 @@ plotshmm.distr(rep, name = "smoo", sleep = 0.1)
 \item{name}{Name of the distribution to plot. Either 'phi', 'pred' or 'smoo'.}
 
 \item{sleep}{Number of seconds to pause between each frame of the animation.}
+
+\item{add.map}{Add map?}
 }
 \value{
 Noting.

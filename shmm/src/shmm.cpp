@@ -62,7 +62,7 @@ namespace shmm {
     predtmp = solver.solve(svec.transpose());
     predtmp = predtmp / predtmp.sum(); // Ensure total probability mass is 1, should be a minor correction
 
-    return predtmp;
+    return predtmp.transpose();
   }
   //};
 
@@ -150,10 +150,12 @@ template<class Type>
 Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(datlik);     // Data likelihood
-  DATA_INTEGER(dosmoo);    // If 1 smoothing is done
   DATA_INTEGER(solvetype); // Type of solver to use
   DATA_INTEGER(ns);        // Number of time steps of solver
   DATA_VECTOR(iobs);       // Indices to which observations correspond
+  DATA_VECTOR(isave);      // Indices to which observations correspond
+  DATA_INTEGER(dosmoo);    // If 1 smoothing is done
+  DATA_INTEGER(doviterbi); // If 1 Viterbi track is calculated
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
   PARAMETER(logDy);        // log diffusion in north-south (y) direction
 
@@ -250,16 +252,97 @@ Type objective_function<Type>::operator() ()
     }
   }
 
+
+  // === Viterbi ===
+  // --- Forward sweep ---
+  vector<Type> track(ns);
+  matrix<Type> xi(ns, n);
+  if (doviterbi == 1){
+    xi.row(0) = phi.row(0);
+    //matrix<Type> xi1 = phi.row(0);
+    //matrix<Type> xi2 = xi1;
+    //vector<Type> xi3(n);
+    matrix<Type> zerovec(1, n);
+    for(int i=0; i < n; i++){
+      zerovec(0, i) = 0.0;
+    }
+    //Type out1 = max(xi1); 
+    //Type out3 = max(xi3); 
+    //REPORT(out);
+    for(int t=1; t < ns; t++){
+      //xi1 = xi2;
+      vector<Type> xitmp(n);
+      for(int i=0; i < n; i++){
+	// Get transition probabilities
+	matrix<Type> vec = zerovec;
+	vec(0, i) = 1.0;
+	matrix<Type> transprob = shmm::ForwardProject(vec, Dx, Dy);
+	//vector<Type> tmp = xi1.cwiseProduct(transprob);
+	vector<Type> tmp = xi.row(t-1).cwiseProduct(transprob);
+	Type mx = max(tmp);
+	if (iobs(t) > 0){
+	  // Data update
+	  int ind = CppAD::Integer(iobs(t)-1);
+	  //xi2(0, i) = mx * datlik(ind, i);
+	  xitmp(i) = mx * datlik(ind, i);
+	} else {
+	  // No data update
+	  xitmp(i) = mx;
+	  //xi2(0, i) = mx;
+	}
+      }
+      xitmp = xitmp / xitmp.sum();
+      xi.row(t) = xitmp;
+    }
+  
+    // --- Backard sweep to find track ---
+    // Start with final step
+    vector<Type> xitmp = xi.row(ns-1);
+    int j = 0;
+    Type thismax = xitmp(0);
+    for(int i=1; i < n; i++){
+      if (xitmp(i) > thismax){
+	thismax = xitmp(i);
+	j = i;
+      }
+    }
+    track(ns-1) = j + 1; 
+    for(int t=1; t < ns; t++){
+      int tt = ns - t;
+      // Get transition probabilities
+      matrix<Type> vec = zerovec;
+      int ind = CppAD::Integer(track(tt)-1);
+      vec(0, ind) = 1.0;
+      matrix<Type> transprob = shmm::ForwardProject(vec, Dx, Dy);
+      vector<Type> tmp = xi.row(tt-1).cwiseProduct(transprob);
+      j = 0;
+      thismax = tmp(0);
+      for(int i=1; i < n; i++){
+	if (tmp(i) > thismax){
+	  thismax = tmp(i);
+	  j = i;
+	}
+      }
+      track(tt-1) = j + 1;
+    }
+  }
+  
+  //REPORT(xi);
+  REPORT(track);
+
   // Store a subset of distribution for output
   matrix<Type> smooout(nobs, n);
   matrix<Type> phiout(nobs, n);
   matrix<Type> predout(nobs, n);
-  for(int t=0; t<ns; t++){
-    if (iobs(t) > 0){
-      int ind = CppAD::Integer(iobs(t)-1);
+  //matrix<Type> xiout(nobs, n);
+  matrix<Type> xiout = xi;
+  for(int t=0; t < ns; t++){
+    if (isave(t) > 0){
+      int ind = CppAD::Integer(isave(t)-1);
       smooout.row(ind) = smoo.row(t);
       phiout.row(ind) = phi.row(t);
       predout.row(ind) = pred.row(t);
+      //xiout.row(ind) = xi.row(t);
     }
   }
 
@@ -268,6 +351,7 @@ Type objective_function<Type>::operator() ()
   REPORT(phiout);
   REPORT(psi);
   REPORT(smooout);
+  REPORT(xiout);
 
   return ans;
 }

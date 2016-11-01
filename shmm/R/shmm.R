@@ -41,27 +41,21 @@ fit.shmm <- function(inp, dbg=0){
         cat('\nEvaluating for fixed parameters...')
         nouse <- obj$fn() # Evaluate fn for initial parameters
     }
-    rep$dosmoo <- 1
-    
-    #cat('\nSmoothing...')
-    #obj$env$data$dosmoo <- 1 # Smooth now
-    #nouse <- obj$fn() # Evaluate fn to do smoothing
-    #inp2 <- inp
-    #obj2 <- make.obj(inp2) # Smoothing not performed here
-    #obj2$env$data$dosmoo <- 1 # Smooth now
-    #nouse <- obj2$fn(obj$env$last.par.best) # Evaluate fn to do smoothing
-    #report <- obj2$report()
+    rep$do.smoo <- inp$do.smoo
     
     cat('\nSave report...')
-    rep$report <- obj$report()
-    for (nm in names(rep$report)){
-        if (nm != 'psi'){
+    rep$reportraw <- obj$report()
+    rep$report <- list()
+    for (nm in names(rep$reportraw)){
+        vecdistr <- rep$reportraw[[nm]]
+        if (length(grep('out', nm)) > 0){
             nmpl <- sub('out', '', nm)
-            vecdistr <- rep$report[[nm]]
             if (length(dim(vecdistr)) == 2){
                 rep$report[[nmpl]] <- format.distr(vecdistr, rep)
                 #rep$report[[nm]] <- NULL
             }
+        } else {
+            rep$report[[nm]] <- vecdistr
         }
     }
     
@@ -118,10 +112,12 @@ make.obj <- function(inp, phase=1){
 #' @export
 make.datlist <- function(inp){
     datlist <- list(datlik=inp$datlik$all,
-                    dosmoo=1,
                     solvetype=inp$solvetypein,
                     ns=inp$ns,
                     iobs=inp$iobs,
+                    isave=inp$isave,
+                    dosmoo=inp$do.smoo,
+                    doviterbi=inp$do.viterbi,
                     I=inp$gen$I,
                     dt=inp$dt,
                     m=inp$gen$m,

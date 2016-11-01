@@ -60,9 +60,10 @@ check.inp <- function(inp){
         inp$do.sd.report <- FALSE
     }
     inp <- set.default(inp, 'do.sd.report', FALSE) # FALSE to save time
-    #inp <- set.default(inp, 'dosmoo', 1)
+    inp <- set.default(inp, 'do.smoo', 1)
+    inp <- set.default(inp, 'do.viterbi', 1)
     inp <- set.default(inp, 'maxm', 20)
-    inp <- set.default(inp, 'solvetype', 'uniformisation') # Other option: 'implicit'
+    inp <- set.default(inp, 'solvetype', 'implicit') # Other option: 'uniformisation' (slower)
 
     # Solvetype
     if (inp$solvetype == 'uniformisation'){
@@ -92,22 +93,25 @@ check.inp <- function(inp){
     inp$date <- as.POSIXct(inp$datliktime*24*60*60, origin='1970-01-01')
     
     # Calculate time vector
+    timerange <- range(unlist(inp$obstimeuse)) / fac
     if (inp$solvetype == 'uniformisation'){
         F <- max.rate(inp$gen$Dx, inp$gen$Dy)
         maxF <- m2rate(inp$gen$m)
         dt <- maxF / F
         inp$dt <- 1/ceiling(1/dt) # Find a "proper" dt
-        timerange <- range(unlist(inp$obstimeuse)) / fac
-        inp$time <- seq(timerange[1], timerange[2], by=inp$dt)
     }
     if (inp$solvetype == 'implicit'){
         inp$dt <- min(diff(inp$obstimeall))
-        inp$time <- inp$obstimeall
     }
+    inp$time <- seq(timerange[1], timerange[2], by=inp$dt)
     inp$ns <- length(inp$time)
 
     # Calculate iobs
     inp$iobs <- match(inp$time, inp$datliktime, nomatch=0)
+
+    # Calculate isave (indices to save)
+    inp$savetime <- seq(min(inp$time), max(inp$time), by=1) # dt of 1 day
+    inp$isave <- match(inp$time, inp$savetime, nomatch=0)
 
     return(inp)
 }
