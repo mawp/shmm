@@ -41,7 +41,7 @@ fit.shmm <- function(inp, dbg=0){
         cat('\nEvaluating for fixed parameters...')
         nouse <- obj$fn() # Evaluate fn for initial parameters
     }
-    rep$do.smoo <- inp$do.smoo
+    #rep$do.smoo <- inp$do.smoo
     
     cat('\nSave report...')
     rep$reportraw <- obj$report()

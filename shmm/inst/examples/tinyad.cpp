@@ -180,7 +180,6 @@ Type objective_function<Type>::operator() ()
 {
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
   PARAMETER(logDy);        // log diffusion in north-south (y) direction
-  // DATA_INTEGER(dosmoo);    // If 1 smoothing is done
 
   // Transfer all constant data to namespace 'shmm'
   if(isDouble<Type>::value){
