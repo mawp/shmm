@@ -32,6 +32,7 @@ namespace shmm {
     matrix<Float> phi;
     vector<Float> psi;
     matrix<Float> smoo; // output from smoothing
+    vector<int> track;
 
     /* Initialize the generator */
     void initialize(Float Dx, Float Dy) {
@@ -76,7 +77,7 @@ namespace shmm {
     }
 
     /* Run filter loop */
-    Float eval(Float Dx, Float Dy, bool do_smoothing = false) {
+    Float eval(Float Dx, Float Dy, bool do_smoothing = false, bool do_viterbi = false) {
       matrix<Float> datlik = shmm::datlik.cast<Float>();
       int nobs = datlik.rows();
       int n = datlik.cols();
@@ -145,7 +146,95 @@ namespace shmm {
 	  smoo.row(tt-1) = post;
 	}	
       }
-      
+
+
+      if(do_viterbi) {
+	// === Viterbi ===
+	// --- Forward sweep ---
+	track.resize(ns);
+
+	matrix<Float> xi(ns, n);
+	xi.row(0) = phi.row(0);
+	matrix<Float> zerovec(1, n);
+	for(int i=0; i < n; i++){
+	  zerovec(0, i) = 0.0;
+	}
+
+	for(int t=1; t < ns; t++){
+
+	  vector<Float> xitmp(n);
+	  for(int i=0; i < n; i++){
+	    // Get transition probabilities
+	    matrix<Float> vec = zerovec;
+	    vec(0, i) = 1.0;
+	    matrix<Float> transprob = vec;
+
+	    if (solvetype == 1){
+	      transprob = forwardProject(vec);
+	    } else if (solvetype == 2) {
+	      transprob = forwardProjecti(vec);
+	    } else error("'solvetype' can by 1 or 2");
+	    vector<Float> tmp = xi.row(t-1).cwiseProduct(transprob);
+	    // Find max value
+	    Float mx = tmp(0);
+	    for(int i=1; i < n; i++){
+	      if (tmp(i) > mx){
+		mx = xitmp(i);
+	      }
+	    }
+	    //Float mx = max(tmp.cast<double>).cast<Float>;
+	    //Float mx = thismax;
+	    if (iobs(t) > 0){
+	      // Data update
+	      int ind = (iobs(t)-1);
+	      xitmp(i) = mx * datlik(ind, i);
+	    } else {
+	      // No data update
+	      xitmp(i) = mx;
+	    }
+	  }
+	  xitmp = xitmp / xitmp.sum();
+	  xi.row(t) = xitmp;
+	}
+
+	// --- Backard sweep to find track ---
+	// Start with final step
+	vector<Float> xitmp = xi.row(ns-1);
+	int j = 0;
+	Float thismax = xitmp(0);
+	for(int i=1; i < n; i++){
+	  if (xitmp(i) > thismax){
+	    thismax = xitmp(i);
+	    j = i;
+	  }
+	}
+	track(ns-1) = j + 1; 
+	for(int t=1; t < ns; t++){
+	  int tt = ns - t;
+	  // Get transition probabilities
+	  matrix<Float> vec = zerovec;
+	  //int ind = CppAD::Integer(track(tt)-1);
+	  int ind = track(tt)-1;
+	  vec(0, ind) = 1.0;
+	  matrix<Float> transprob = vec;
+	  if (solvetype == 1){
+	    transprob = forwardProject(vec);
+	  } else if (solvetype == 2) {
+	    transprob = forwardProjecti(vec);
+	  } else error("'solvetype' can by 1 or 2");
+	  vector<Float> tmp = xi.row(tt-1).cwiseProduct(transprob);
+	  j = 0;
+	  thismax = tmp(0);
+	  for(int i=1; i < n; i++){
+	    if (tmp(i) > thismax){
+	      thismax = tmp(i);
+	      j = i;
+	    }
+	  }
+	  track(tt-1) = j + 1;
+	}
+      }  
+
       return ans;
     }
     
@@ -180,6 +269,7 @@ Type objective_function<Type>::operator() ()
 {
   PARAMETER(logDx);        // log diffusion in east-west (x) direction
   PARAMETER(logDy);        // log diffusion in north-south (y) direction
+  DATA_INTEGER(doviterbi); // Type of solver to use
 
   // Transfer all constant data to namespace 'shmm'
   if(isDouble<Type>::value){
@@ -220,7 +310,7 @@ Type objective_function<Type>::operator() ()
      is only entered by obj$report(). */
   if(isDouble<Type>::value) {
     shmm::filter_t<double> filter;
-    filter.eval(asDouble(Dx), asDouble(Dy), true /* do_smoothing */ );
+    filter.eval(asDouble(Dx), asDouble(Dy), true /* do_smoothing */, doviterbi == 1 /* do_viterbi */ );
     // Store a subset of distribution for output
     int nobs = shmm::datlik.rows();
     int n = shmm::datlik.cols();
@@ -238,36 +328,17 @@ Type objective_function<Type>::operator() ()
       }
     }
     vector<double> psi = filter.psi;
+    vector<int> trackout = filter.track;
     // Reports
     REPORT(predout);
     REPORT(phiout);
     REPORT(psi);
     REPORT(smooout); 
+    //REPORT(xi);
+    REPORT(trackout);
   }
   
   return ans;
-
-  /*
-  // Viterbi
-  // Forward sweep
-  vector<Type> ksi1 = phi.row(0);
-  vector<Type> ksi2 = ksi1;
-  matrix<Type> zerovec(1, n);
-  for(int i=0; i < n; i++){
-    zerovec(0, i) = 0.0;
-  }
-  Type out = max(ksi1); 
-  REPORT(out);
-  for(int t=0; t<ns; t++){
-    for(int i=0; i < n; i++){
-      matrix<Type> vec = zerovec;
-      vec(0, i) = phi(t, i);
-      matrix<Type> newvec = shmm::ForwardProject(vec, Dx, Dy);
-    }
-  }
-  // Backard sweep
-  */
-
 
 }
 

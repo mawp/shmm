@@ -32,20 +32,29 @@ plotshmm.distr <- function(rep, name='smoo', sleep=0.05, add.map=TRUE){
         image(rep$inp$grid$xx, rep$inp$grid$yy, -distr[i, , ], xlab='X',
               ylab='Y', main=main)
         if ('tracks' %in% names(rep)){
-            if ('Xmean' %in% names(rep$tracks) & 'Ymean' %in% names(rep$tracks)){
-                lines(rep$tracks$Xmean[1:i], rep$tracks$Ymean[1:i], col='blue')
+            if ('mean' %in% names(rep$tracks)){
+                lines(rep$tracks$mean$X[1:i], rep$tracks$mean$Y[1:i], col='blue')
+                points(rep$tracks$mean$X[1:i], rep$tracks$mean$Y[1:i], col='blue',
+                       pch=20, cex=0.7)
+            }
+            if ('viterbi' %in% names(rep$tracks)){
+                lines(rep$tracks$viterbi$X[1:i], rep$tracks$viterbi$Y[1:i], col='red')
+                points(rep$tracks$viterbi$X[1:i], rep$tracks$viterbi$Y[1:i], col='red',
+                       pch=20, cex=0.7)
             }
         }
         if ('true' %in% names(rep$inp)){
             lines(rep$inp$true$X[1:i], rep$inp$true$Y[1:i], col='green')
-            legend('topright', legend=c('True', 'Mean'), lty=1,
-                   col=c('green', 'blue'), bg='white')
-        } else {
-            legend('topright', legend='Mean', lty=1, col='blue', bg='white')
         }
         if (add.map){
             require(maps)
             maps::map(add=TRUE)
+        }
+        if ('true' %in% names(rep$inp)){
+            legend('topright', legend=c('True', 'Mean'), lty=1,
+                   col=c('green', 'blue'), bg='white')
+        } else {
+            legend('topright', legend='Mean', lty=1, col='blue', bg='white')
         }
         Sys.sleep(sleep)
     }

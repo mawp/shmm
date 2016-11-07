@@ -65,8 +65,8 @@ fit.shmm <- function(inp, dbg=0){
     }
 
     rep$obj <- obj
-    cat('\nCalculating track...')
-    rep <- get.mean.track(rep)
+    cat('\nCalculating tracks...')
+    rep <- get.tracks(rep)
 
     rep$computing.time <- difftime(Sys.time(), tic, unit='secs')
     
@@ -111,13 +111,14 @@ make.obj <- function(inp, phase=1){
 #' @return List to be used as data input to TMB::MakeADFun.
 #' @export
 make.datlist <- function(inp){
-    datlist <- list(datlik=inp$datlik$all,
+    datlist <- list(doviterbi=inp$do.viterbi,
+                    datlik=inp$datlik$all,
                     solvetype=inp$solvetypein,
                     ns=inp$ns,
                     iobs=inp$iobs,
-                    isave=inp$isave,
-                    dosmoo=inp$do.smoo,
-                    doviterbi=inp$do.viterbi,
+                    #isave=inp$isave,
+                    #dosmoo=inp$do.smoo,
+                    #doviterbi=inp$do.viterbi,
                     I=inp$gen$I,
                     dt=inp$dt,
                     m=inp$gen$m,
