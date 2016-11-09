@@ -4,12 +4,10 @@
 \alias{make.parlist}
 \title{Create parameter list used as input to TMB::MakeADFun.}
 \usage{
-make.parlist(inp, dosmoo = 1)
+make.parlist(inp)
 }
 \arguments{
 \item{inp}{List of input variables as output by check.inp.}
-
-\item{dosmoo}{Do smoothing?}
 }
 \value{
 List to be used as parameter input to TMB::MakeADFun.

@@ -7,8 +7,8 @@ inp <- list()
 inp$datatypes <- 'xy'
 inp$do.estimation <- TRUE
 inp$do.sd.report <- FALSE
-inp$do.smoo <- 0
-inp$do.viterbi <- 0
+#inp$do.smoo <- 0
+#inp$do.viterbi <- 0
 
 # Parameters used for simulation
 inp$ini$logsdx <- log(5)
@@ -17,25 +17,27 @@ inp$osd <- 1 # Observation error sd
 #inp$dt <- 1
 inp$maxm <- 25
 
-inp$grid$dx <- 1.2 / 3
-inp$grid$dy <- 1.2 / 3
+inp$grid$dx <- 1.2 / 1
+inp$grid$dy <- 1.2 / 1
 
 # Simulate
-inp <- sim.shmm(inp, nobs=10)
+inp <- sim.shmm(inp, nobs=200)
 
 # Initial values
 inp$ini$logsdx <- log(8)
 inp$ini$logsdy <- log(8)
 
+
 # Make grid
+fracext <- 0.2
 # X
-xmin <- min(inp$true$X) - 0.1*diff(range(inp$true$X))
-xmax <- max(inp$true$X) + 0.1*diff(range(inp$true$X))
+xmin <- min(inp$true$X) - fracext*diff(range(inp$true$X))
+xmax <- max(inp$true$X) + fracext*diff(range(inp$true$X))
 inp$grid$xx <- seq(xmin, xmax, by=inp$grid$dx)
 inp$grid$nx <- length(inp$grid$xx)
 # Y
-ymin <- min(inp$true$Y) - 0.1*diff(range(inp$true$Y))
-ymax <- max(inp$true$Y) + 0.1*diff(range(inp$true$Y))
+ymin <- min(inp$true$Y) - fracext*diff(range(inp$true$Y))
+ymax <- max(inp$true$Y) + fracext*diff(range(inp$true$Y))
 inp$grid$yy <- seq(ymin, ymax, by=inp$grid$dy)
 inp$grid$ny <- length(inp$grid$yy)
 # Land
@@ -47,7 +49,7 @@ inp$land <- dummy == 1
 cat('nx: ', inp$grid$nx, ' ny: ', inp$grid$ny, ' no states: ', inp$grid$nx*inp$grid$ny, '\n')
 
 # Calculate data likelihood
-inp$solvetype <- 'uniformisation'
+#inp$solvetype <- 'uniformisation'
 #inp$solvetype <- 'implicit'
 inp <- calc.data.likelihood(inp)
 print(inp$dt)
@@ -66,15 +68,17 @@ datlist <- list(datlik=inp$datlik$all,
                 lgam=inp$gen$lgam)
 
 parlist <- list(logDx=log(inp$gen$Dx),
-                logDy=log(inp$gen$Dy),
-                dosmoo=1)
+                logDy=log(inp$gen$Dy))
 
 compile('tinyad.cpp')
 dyn.load(dynlib("tinyad"))
+
+tic <- Sys.time()
+rep <- list(inp=inp)
 obj <- TMB::MakeADFun(data=datlist,
                       parameters=parlist,
                       random=NULL,
-                      map=list(dosmoo=factor(NA)),
+                      #map=list(dosmoo=factor(NA)),
                       DLL='tinyad',
                       checkParameterOrder=FALSE)
 # Make TMB quiet
@@ -85,9 +89,28 @@ obj$env$inner.control$trace <- verbose
 obj$env$silent <- ! verbose
 obj$fn(obj$par)
 obj$gr(obj$par)
+rep$opt <- nlminb(obj$par, obj$fn, obj$gr)
 
+rep$reportraw <- obj$report()
+rep$report <- list()
+for (nm in names(rep$reportraw)){
+    vecdistr <- rep$reportraw[[nm]]
+    if (length(grep('out', nm)) > 0){
+        nmpl <- sub('out', '', nm)
+        if (length(dim(vecdistr)) == 2){
+            rep$report[[nmpl]] <- shmm:::format.distr(vecdistr, rep)
+            #rep$report[[nm]] <- NULL
+        }
+    } else {
+        rep$report[[nm]] <- vecdistr
+    }
+}
+    rep <- get.mean.track(rep)
+toc <- Sys.time()
+print(toc-tic)
 
-obj <- make.obj(inp) # Smoothing not performed here
+plotshmm.distr(rep, add.map=FALSE)
 
 res <- fit.shmm(inp)
-
+plotshmm.distr(res, add.map=FALSE)
+print(res$computing.time)

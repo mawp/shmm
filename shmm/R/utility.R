@@ -208,13 +208,25 @@ format.distr <- function(vecdistr, rep){
 }
 
 
-#' @name get.mean.track
-#' @title Calculate an estimated track from the mean of the smoothed distribution.
+#' @name get.tracks
+#' @title Calculate estimated tracks
 #' @param rep Result of running fit.shmm.
-#' @return A list containing 
+#' @return A list containing track coodinates
 #' @export
-get.mean.track <- function(rep){
-    if (rep$do.smoo == 1){
+get.tracks <- function(rep){
+    # Viterbi track (most probable track)
+    if (rep$inp$do.viterbi == 1){
+        track <- rep$reportraw$trackout
+        landinds <- which(rep$inp$land)
+        indmat <- matrix(1:(rep$inp$grid$nx*rep$inp$grid$ny),
+                         rep$inp$grid$nx, rep$inp$grid$ny)[-landinds]
+        newtrackinds <- indmat[track]
+        rc <- ind2sub(newtrackinds, rep$inp$grid$nx)
+        rep$tracks$viterbi$X <- rep$inp$grid$xx[rc$r]
+        rep$tracks$viterbi$Y <- rep$inp$grid$yy[rc$c]
+    }
+    # Mean track
+    if (rep$inp$do.smoo == 1){
         distr <- rep$report$smoo
     } else {
         distr <- rep$report$phi
@@ -226,8 +238,8 @@ get.mean.track <- function(rep){
         Xmean[t] <- sum(apply(distr[t, , ], 1, sum) * rep$inp$grid$xx)
         Ymean[t] <- sum(apply(distr[t, , ], 2, sum) * rep$inp$grid$yy)
     }
-    rep$tracks$Xmean <- Xmean
-    rep$tracks$Ymean <- Ymean
+    rep$tracks$mean$X <- Xmean
+    rep$tracks$mean$Y <- Ymean
     return(rep)
 }
 
