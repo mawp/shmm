@@ -14,6 +14,24 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#' @name get.rel.recap
+#' @title Extract release and recapture info from psat xlsx-file.
+#' @details Extract release and recapture info from psat xlsx-file.
+#' @param fn Path to input xlsx-file.
+#' @return List of release and recapture info.
+get.rel.recap <- function(fn){
+	dat_psat <- openxlsx::read.xlsx(fn, sheet=6, rows=c(4:13), cols=7:9)
+	start_date <- as.POSIXct(as.numeric(dat_psat[1,1])*(24*60*60), tz="UTC", origin="1899-12-30")
+	start_lon <- -1*as.numeric(dat_psat[3,2]) #-1 because manufacturer use negative longitudes for eastern
+	start_lat <-    as.numeric(dat_psat[3,1])
+	end_date   <- as.POSIXct(floor(as.numeric(dat_psat[5,1]))*(24*60*60), tz="UTC", origin="1899-12-30")
+	end_lon <- -1*as.numeric(dat_psat[7,2]) #-1 because manufacturer use negative longitudes for eastern
+	end_lat <-    as.numeric(dat_psat[7,1])
+	
+	dat_rr <- list(start_date=start_date, start_lon=start_lon,	start_lat=start_lat, end_date=end_date, end_lon=end_lon, end_lat=end_lat)
+	return(dat_rr)
+}
+
 
 #' @name get.dat.sun
 #' @title Extract sun info from psat xlsx-file.
@@ -24,7 +42,7 @@
 get.dat.sun <- function(fn, filter_thres=0.2, showPlot=TRUE){
 	dat_s <- openxlsx::read.xlsx(fn, sheet="Sunrise and Sunset Times", startRow=2, cols=1:5)
 	colnames(dat_s) <- c('date','sr','depth_sr', 'ss','depth_ss')
-	dat_s$date <- as.POSIXct((dat_s$date*(24*60*60)), tz="GMT", origin="1899-12-30")
+	dat_s$date <- as.POSIXct((dat_s$date*(24*60*60)), tz="UTC", origin="1899-12-30")
 	dat_s$depth_sr <- as.numeric(dat_s$depth_sr)
 	dat_s$depth_ss <- as.numeric(dat_s$depth_ss)
 	dat_s$sr_rm <- 0

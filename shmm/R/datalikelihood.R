@@ -75,6 +75,7 @@ calc.data.likelihood <- function(inp){
 #' @return List containing datlik_sst: Array of daily likelihoods given the input data; times: vector of corresponding times
 get.datlik.sst <- function(grid, obs, sds, times){
 	datlik_sst <- dnorm(grid, obs, sds)
+	dimnames(datlik_sst) <- NULL
 	return(list(datlik_sst=datlik_sst, times=times))
 }
 
@@ -86,7 +87,7 @@ get.datlik.sst <- function(grid, obs, sds, times){
 #' @param dat_sun Dataframe obtained from get.dat.sun().
 #' @param solarDep Numeric value with the angle of the sun below the horizon in degrees. 6 seems to be good based on know values at start.
 #' @return List containing datlik_lon: Array of daily likelihoods given the input data; times: vector of corresponding times
-get.datlik.sun <- function(grid_lon, grid_lat, dat_sun, solarDep=6){
+get.datlik.sun <- function(grid_lon, grid_lat, dat_sun, solarDep=6, sd=3e-2){
 	grid <- expand.grid(x=grid_lon, y=grid_lat)
 	sp::coordinates(grid) <- c("x","y")
 	SP <- sp::SpatialPoints(sp::coordinates(grid),proj4string=sp::CRS("+proj=longlat +datum=WGS84"))
@@ -96,29 +97,29 @@ get.datlik.sun <- function(grid_lon, grid_lat, dat_sun, solarDep=6){
 		if(k$sr_rm == 0){
 			dawn <- maptools::crepuscule(SP, date, solarDep=solarDep, direction="dawn")
 			dawn_mat <- matrix(dawn, ncol=length(grid_lat), nrow=length(grid_lon))
-			dawn_lik <- dnorm(dawn_mat, k$sr, sd=2e-2) #Maybe add a component from depth at sunrise
+			dawn_lik <- dnorm(dawn_mat, k$sr, sd=sd) #Maybe add a component from depth at sunrise
 		} else {
 			dawn_lik <- matrix(1, ncol=length(grid_lat), nrow=length(grid_lon))
 		}
 		if(k$ss_rm == 0){
 			dusk <- maptools::crepuscule(SP, date, solarDep=solarDep, direction="dusk")
 			dusk_mat <- matrix(dusk, ncol=length(grid_lat), nrow=length(grid_lon))
-			dusk_lik <- dnorm(dusk_mat, k$ss, sd=2e-2) #Maybe add a component from depth at sunset
+			dusk_lik <- dnorm(dusk_mat, k$ss, sd=sd) #Maybe add a component from depth at sunset
 		} else {
 			dusk_lik <- matrix(1, ncol=length(grid_lat), nrow=length(grid_lon))
 		}
 		if(k$sr_rm == 0 & k$ss_rm == 0){
 			daylength_mat <- dusk_mat - dawn_mat
-			daylength_lik <- dnorm(daylength_mat, k$ss - k$sr, sd=2e-2)
+			daylength_lik <- dnorm(daylength_mat, k$ss - k$sr, sd=sd)
 		} else {
 			daylength_lik <- matrix(1, ncol=length(grid_lat), nrow=length(grid_lon))
 		}
 		return(dusk_lik * dawn_lik * daylength_lik)
 	})
-	
+	dimnames(datlik_sun) <- NULL
 	rms <- which(dat_sun$sr_rm == 1 & dat_sun$ss_rm == 1)
-	
 	datlik_sun <- datlik_sun[-rms,,]
+	datlik_sun[is.na(datlik_sun)] <- 0 #TMB does not like NAs
 	times <- dat_sun$date[-rms]
 	return(list(datlik_sun = datlik_sun, times=times))
 }
@@ -141,4 +142,28 @@ get.datlik.lon <- function(grid_lon, grid_lat, f_lon, sd, times){
 	})
 	return(list(datlik_lon = datlik_lon, times=times))
 }
+
+#' @name get.datlik.rel.recap
+#' @title Get data likelihood for release and recapture.
+#' @details Get data likelihood for release and recapture.
+#' @param grid_lon Vector of longitudes to build grid from.
+#' @param grid_lat Vector of lattitudes to build grid from.
+#' @param sd Standard deviations to be used for calculating likelihood - defaults to 1.
+#' @param dat_rr Object obtained from get.rel.recap().
+#' @return List containing dates and datliks for release and recapture.
+get.datlik.rel.recap <- function(grid_lon, grid_lat, sd=1, dat_rr){
+	list_rr <- list()
+	list_rr$datlik_rel <- array(0, dim=c(1,length(grid_lon), length(grid_lat)))
+	list_rr$datlik_rel[1, , ] <- outer(dnorm(grid_lon, dat_rr$start_lon, sd=sd),
+								dnorm(grid_lat, dat_rr$start_lat, sd=sd))
+	list_rr$rel_date <- as.POSIXct(dat_rr$start_date, tz="UTC")
+
+	list_rr$datlik_rec <- array(0, dim=c(1,length(grid_lon), length(grid_lat)))
+	list_rr$datlik_rec[1, , ] <- outer(dnorm(grid_lon, dat_rr$end_lon, sd=sd),
+								dnorm(grid_lat, dat_rr$end_lat, sd=sd))
+	list_rr$rec_date <- as.POSIXct(dat_rr$end_date, tz="UTC")
+	return(list_rr)
+}
+
+
 
